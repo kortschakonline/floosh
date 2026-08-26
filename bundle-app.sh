@@ -4,9 +4,13 @@
 set -e
 cd "$(dirname "$0")"
 
-echo "→ Release-Build …"
-BIN=".build/release/Floosh"
-HELPER_BIN=".build/release/FlooshFanHelper"
+echo "→ Release-Build (Universal: arm64 + x86_64) …"
+BIN=".build/apple/Products/Release/Floosh"
+HELPER_BIN=".build/apple/Products/Release/FlooshFanHelper"
+if ! swift build -c release --arch arm64 --arch x86_64; then
+  echo "→ Universal-Build fehlgeschlagen — Fallback: nur arm64 …"
+  BIN=".build/release/Floosh"
+  HELPER_BIN=".build/release/FlooshFanHelper"
 if ! swift build -c release; then
   # Fallback für Macs, auf denen swift build nicht kann (CLT ohne SwiftUI-
   # Makros bzw. Xcode-Lizenz noch nicht akzeptiert): die Xcode-Toolchain
@@ -30,6 +34,7 @@ if ! swift build -c release; then
     -O -target arm64-apple-macos26.0 \
     -sdk "$XC/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" \
     Sources/FlooshFanHelper/*.swift Sources/FlooshShared/*.swift -o "$HELPER_BIN"
+fi
 fi
 
 APP="build/floosh.app"
