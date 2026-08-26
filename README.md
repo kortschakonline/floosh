@@ -39,9 +39,9 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
 ## Screenshots
 
 <p>
-  <img src="docs/shot-dropdown.png" alt="Liquid-Glass-Dropdown mit Live-Diagrammen" width="360" align="top">
+  <img src="docs/shot-dropdown.png" alt="Liquid-Glass-Dropdown mit System-Karte (CPU/GPU/Temperatur, Lüfter) und Live-Diagrammen" width="360" align="top">
   &nbsp;&nbsp;
-  <img src="docs/shot-settings.png" alt="Einstellungen — Allgemein" width="380" align="top">
+  <img src="docs/shot-settings.png" alt="Einstellungen — Anzeige" width="380" align="top">
 </p>
 
 ## Bauen
@@ -76,7 +76,12 @@ Mindestsystem: macOS 26 (Liquid Glass). Kein Sandbox-Entitlement nötig.
 - Disk-Images (`Virtual Interface`) zählen optional zu „Intern" (Standard: aus,
   vermeidet Doppelzählung).
 - Synthetische AppleScript-Klicks öffnen MenuBarExtra-Fenster unter macOS 26 nicht —
-  für UI-Tests echte CGEvent-HID-Klicks verwenden.
+  für UI-Tests echte CGEvent-HID-Klicks verwenden. Alternativ die Dev-Hooks:
+  `floosh --snapshot <ordner>` rendert Dropdown + Label-Varianten offscreen als
+  PNG (ohne Glas), `floosh --shoot` zeigt Dropdown/Einstellungen in echten
+  Fenstern (echtes Liquid Glass) und meldet Region/Fenster-ID auf stdout für
+  ein externes `screencapture` — so entstanden die README-Screenshots
+  (`--shoot settings` nur das Einstellungsfenster, ohne Warmlaufphase).
 - App-Icon wird per `Tools/make-icon.sh` aus den Marken-Pfaden in
   `BrandLogos.swift` generiert (Navy-Kachel + Doppel-Blitz) und liegt als
   `AppIcon.icns` im Repo.

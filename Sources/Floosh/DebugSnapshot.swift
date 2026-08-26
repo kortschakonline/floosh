@@ -17,13 +17,28 @@ enum DebugSnapshot {
     }
 
     static func runIfRequested(engine: StatsEngine) {
-        guard let dir = requestedDirectory else { return }
-        Task { @MainActor in
-            // Sampler zwei Runden laufen lassen, damit echte Werte da sind
-            try? await Task.sleep(for: .seconds(3))
-            write(to: dir, engine: engine)
-            NSApp.terminate(nil)
+        if let dir = requestedDirectory {
+            Task { @MainActor in
+                // Sampler zwei Runden laufen lassen, damit echte Werte da sind
+                try? await Task.sleep(for: .seconds(3))
+                write(to: dir, engine: engine)
+                NSApp.terminate(nil)
+            }
         }
+        if shootRequested {
+            Task { @MainActor in
+                await RealWindowShots.run(engine: engine)
+                NSApp.terminate(nil)
+            }
+        }
+    }
+
+    /// `floosh --shoot`: zeigt Dropdown und Einstellungen nacheinander in
+    /// echten Fenstern (echtes Liquid Glass) und meldet Region/Fenster-ID auf
+    /// stdout, damit ein externes `screencapture` die README-Screenshots
+    /// aufnehmen kann (siehe `RealWindowShots`).
+    static var shootRequested: Bool {
+        CommandLine.arguments.contains("--shoot")
     }
 
     private static func write(to dir: String, engine: StatsEngine) {
