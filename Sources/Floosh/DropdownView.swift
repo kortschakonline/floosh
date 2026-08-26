@@ -13,6 +13,8 @@ struct DropdownView: View {
                 ForEach(SpeedGroup.allCases) { group in
                     GroupCard(engine: engine, group: group)
                 }
+
+                footer
             }
             .padding(14)
         }
@@ -21,9 +23,7 @@ struct DropdownView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            FlooshLogo(size: 15, tint: engine.selectedGroup.tint)
-            Text("floosh")
-                .font(.system(.headline, design: .rounded, weight: .bold))
+            FlooshWordmark(height: 24)
             Spacer()
             Button {
                 openSettings()
@@ -47,5 +47,18 @@ struct DropdownView: View {
             .help("floosh beenden")
         }
         .padding(.horizontal, 2)
+    }
+
+    /// Dezente Credit-Zeile: die JRN.digital-Wortmarke, klickbar zur Website.
+    private var footer: some View {
+        Link(destination: URL(string: "https://jrn.digital")!) {
+            JRNLogo(height: 9)
+                .opacity(0.45)
+        }
+        .buttonStyle(.plain)
+        .help("Entwickelt von JRN.digital")
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(.horizontal, 2)
+        .padding(.top, -4)
     }
 }

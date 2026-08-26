@@ -1,9 +1,14 @@
-# floosh ⚡
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.png">
+  <img src="docs/logo-light.png" alt="floosh" height="72">
+</picture>
 
 Mini-Menüleisten-App für macOS: zeigt den aktuellen Datendurchsatz von drei Gruppen —
 **Intern** (interne Laufwerke), **Extern** (USB/Thunderbolt-Laufwerke) und **Netzwerk**
 (physische Interfaces, Down/Up). Liquid-Glass-Dropdown mit Live-Diagrammen,
-Spitzenwerten und Geräteliste. Logo: eine Stoppuhr, durch die ein Blitz fährt.
+Spitzenwerten und Geräteliste. Logo: der floosh-Doppel-Blitz (SVG-Quelle in
+`Logo & Icon Source/`, als Vektorpfade eingebettet in `BrandLogos.swift`,
+zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
 
 - SwiftUI `MenuBarExtra` (Window-Style) · Liquid Glass (`glassEffect`) · Swift Charts
 - Messung: IOKit `IOBlockStorageDriver`-Statistiken (Laufwerke, Klassifizierung über
@@ -17,6 +22,14 @@ Spitzenwerten und Geräteliste. Logo: eine Stoppuhr, durch die ein Blitz fährt.
   Allgemein**: Stil, Symbol, Einheit MB/s / Mbit/s, Intervall 0,5–2 s,
   Diagramm-Fenster 30–120 s, Quellen-Toggles, Login-Start (`SMAppService`).
 
+## Screenshots
+
+<p>
+  <img src="docs/shot-dropdown.png" alt="Liquid-Glass-Dropdown mit Live-Diagrammen" width="360" align="top">
+  &nbsp;&nbsp;
+  <img src="docs/shot-settings.png" alt="Einstellungen — Allgemein" width="380" align="top">
+</p>
+
 ## Bauen
 
 ```bash
@@ -24,7 +37,13 @@ Spitzenwerten und Geräteliste. Logo: eine Stoppuhr, durch die ein Blitz fährt.
 ```
 
 Ergebnis: `build/floosh.app` (Release, ad-hoc-signiert, `LSUIElement`).
-Installieren: nach `/Applications` kopieren.
+Installieren: nach `/Applications` kopieren — oder gleich den Installer bauen:
+
+```bash
+./Tools/make-dmg.sh
+```
+
+Ergebnis: `build/floosh-<version>.dmg` (App + Applications-Verknüpfung).
 
 Mindestsystem: macOS 26 (Liquid Glass). Kein Sandbox-Entitlement nötig.
 
@@ -38,5 +57,9 @@ Mindestsystem: macOS 26 (Liquid Glass). Kein Sandbox-Entitlement nötig.
   vermeidet Doppelzählung).
 - Synthetische AppleScript-Klicks öffnen MenuBarExtra-Fenster unter macOS 26 nicht —
   für UI-Tests echte CGEvent-HID-Klicks verwenden.
-- App-Icon wird per Script generiert (Stoppuhr + Blitz, CoreGraphics/SF Symbols) und
-  liegt als `AppIcon.icns` im Repo.
+- App-Icon wird per `Tools/make-icon.sh` aus den Marken-Pfaden in
+  `BrandLogos.swift` generiert (Navy-Kachel + Doppel-Blitz) und liegt als
+  `AppIcon.icns` im Repo.
+- `BrandLogos.swift` wurde aus den SVGs konvertiert (SVG-Pfaddaten →
+  SwiftUI-`Path`); bei Logo-Änderungen die SVGs austauschen und neu
+  konvertieren, nicht die Pfade von Hand editieren.

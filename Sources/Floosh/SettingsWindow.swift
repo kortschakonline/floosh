@@ -87,6 +87,24 @@ private struct GeneralSettingsTab: View {
 
     var body: some View {
         Form {
+            Section {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        FlooshWordmark(height: 30)
+                        Text("Version 1.0.0")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Link(destination: URL(string: "https://jrn.digital")!) {
+                        JRNLogo(height: 22)
+                    }
+                    .buttonStyle(.plain)
+                    .help("jrn.digital öffnen")
+                }
+                .padding(.vertical, 4)
+            }
+
             Toggle("Bei Anmeldung starten", isOn: $launchAtLogin)
                 .onChange(of: launchAtLogin) { _, newValue in
                     updateLoginItem(enabled: newValue)
@@ -98,8 +116,9 @@ private struct GeneralSettingsTab: View {
             }
 
             Section {
-                LabeledContent("Version", value: "1.0.0")
-                LabeledContent("Entwickelt von", value: "JRN.digital")
+                LabeledContent("Entwickelt von") {
+                    Link("jrn.digital", destination: URL(string: "https://jrn.digital")!)
+                }
             }
         }
         .formStyle(.grouped)

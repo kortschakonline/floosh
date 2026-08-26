@@ -4,10 +4,27 @@ set -e
 cd "$(dirname "$0")"
 
 echo "→ Release-Build …"
-swift build -c release
+BIN=".build/release/Floosh"
+if ! swift build -c release; then
+  # Fallback für Macs, auf denen swift build nicht kann (CLT ohne SwiftUI-
+  # Makros bzw. Xcode-Lizenz noch nicht akzeptiert): die Xcode-Toolchain
+  # DIREKT aufrufen — die /usr/bin-Shims (xcrun) verweigern bei
+  # unakzeptierter Xcode-Lizenz jeden Aufruf, die Binaries darunter nicht.
+  # Wichtig: swiftc, SDK und SwiftUI-Makro-Plugin müssen aus DEMSELBEN
+  # Xcode kommen (CLT-SDK + Xcode-Plugin mischen bricht an der Makro-ABI).
+  XC="/Applications/Xcode.app/Contents/Developer"
+  PLUGIN="$XC/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins/libSwiftUIMacros.dylib"
+  echo "→ swift build fehlgeschlagen — Fallback: Xcode-swiftc direkt …"
+  [[ -f "$PLUGIN" ]] || { echo "✗ $PLUGIN fehlt (Xcode installiert?)"; exit 1 }
+  mkdir -p .build/release
+  "$XC/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
+    -O -parse-as-library -target arm64-apple-macos26.0 \
+    -sdk "$XC/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" \
+    -load-plugin-library "$PLUGIN" \
+    Sources/Floosh/*.swift -o "$BIN"
+fi
 
 APP="build/floosh.app"
-BIN=".build/release/Floosh"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
