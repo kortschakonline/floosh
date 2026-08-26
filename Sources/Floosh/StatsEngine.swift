@@ -23,6 +23,11 @@ final class StatsEngine {
     ]
     private(set) var lastSampleDate = Date()
 
+    /// CPU/GPU-Auslastung, Temperaturen und Lüfter (jede Runde neu abgetastet).
+    private(set) var system = SystemSampler.Reading(cpuUsage: nil, gpuUsage: nil,
+                                                    cpuTemp: nil, gpuTemp: nil, fans: [])
+    var chipName: String { systemSampler.chipName }
+
     func state(for group: SpeedGroup) -> GroupState {
         groups[group] ?? GroupState()
     }
@@ -66,6 +71,9 @@ final class StatsEngine {
     var includeVirtualNets: Bool {
         didSet { defaults.set(includeVirtualNets, forKey: "ds.virtualNets") }
     }
+    var menuSystemStyle: MenuSystemStyle {
+        didSet { defaults.set(menuSystemStyle.rawValue, forKey: "ds.menuSystem") }
+    }
 
     // MARK: Intern
 
@@ -75,6 +83,7 @@ final class StatsEngine {
     private var lastTickUptime: TimeInterval?
     private var loop: Task<Void, Never>?
     private let maxHistory: TimeInterval = 200 // Sekunden Verlauf im Speicher
+    private let systemSampler = SystemSampler()
 
     init() {
         selectedGroup = SpeedGroup(rawValue: defaults.string(forKey: "ds.group") ?? "") ?? .internalDrives
@@ -87,6 +96,7 @@ final class StatsEngine {
         showPeaks = defaults.object(forKey: "ds.showPeaks") as? Bool ?? true
         includeVirtualDisks = defaults.object(forKey: "ds.virtualDisks") as? Bool ?? false
         includeVirtualNets = defaults.object(forKey: "ds.virtualNets") as? Bool ?? false
+        menuSystemStyle = MenuSystemStyle(rawValue: defaults.string(forKey: "ds.menuSystem") ?? "") ?? .off
         start()
     }
 
@@ -108,6 +118,7 @@ final class StatsEngine {
         let now = ProcessInfo.processInfo.systemUptime
         let disks = DiskSampler.sample()
         let nets = NetSampler.sample()
+        system = systemSampler.sample()
 
         defer { lastTickUptime = now }
 

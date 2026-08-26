@@ -58,7 +58,7 @@ struct GroupCard: View {
             .contentShape(.rect(cornerRadius: 20))
         }
         .buttonStyle(.plain)
-        .glassEffect(glass, in: .rect(cornerRadius: 20))
+        .cardGlass(glass)
         .overlay {
             if isSelected {
                 RoundedRectangle(cornerRadius: 20)
@@ -143,6 +143,21 @@ struct GroupCard: View {
             }
         }
         .padding(.top, 2)
+    }
+}
+
+// MARK: - Karten-Glas
+
+extension View {
+    /// Liquid Glass der Karten; im Snapshot-Modus eine einfache Fläche,
+    /// weil `ImageRenderer` glassEffect-Inhalte nicht darstellt.
+    @ViewBuilder
+    func cardGlass(_ glass: Glass, cornerRadius: CGFloat = 20) -> some View {
+        if DebugSnapshot.isActive {
+            background(.gray.opacity(0.18), in: .rect(cornerRadius: cornerRadius))
+        } else {
+            glassEffect(glass, in: .rect(cornerRadius: cornerRadius))
+        }
     }
 }
 

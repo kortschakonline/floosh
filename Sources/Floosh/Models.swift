@@ -91,6 +91,19 @@ enum MenuLabelStyle: String, CaseIterable, Identifiable {
     }
 }
 
+/// Darstellung von CPU- & GPU-Auslastung in der Menüleiste (zweizeilig).
+enum MenuSystemStyle: String, CaseIterable, Identifiable {
+    case off, number, bar
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .off: "Aus"
+        case .number: "Zahl (%)"
+        case .bar: "Balken"
+        }
+    }
+}
+
 /// Stil des Symbols in der Menüleiste.
 enum MenuIconStyle: String, CaseIterable, Identifiable {
     case outline, filled, color

@@ -7,9 +7,21 @@ let package = Package(
         .macOS("26.0")
     ],
     targets: [
+        // Gemeinsamer SMC-Zugriff + XPC-Protokoll für App und Helper
+        .target(
+            name: "FlooshShared",
+            path: "Sources/FlooshShared"
+        ),
         .executableTarget(
             name: "Floosh",
+            dependencies: ["FlooshShared"],
             path: "Sources/Floosh"
-        )
+        ),
+        // Privilegierter Helper (LaunchDaemon) für Lüfter-Schreibzugriff
+        .executableTarget(
+            name: "FlooshFanHelper",
+            dependencies: ["FlooshShared"],
+            path: "Sources/FlooshFanHelper"
+        ),
     ]
 )
