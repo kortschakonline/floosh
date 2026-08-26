@@ -59,7 +59,9 @@ Installieren: nach `/Applications` kopieren — oder gleich den Installer bauen:
 
 Ergebnis: `build/floosh-<version>.dmg` (App + Applications-Verknüpfung).
 
-Mindestsystem: macOS 26 (Liquid Glass). Kein Sandbox-Entitlement nötig.
+Mindestsystem: macOS 14 (Sonoma), Universal Binary (Apple Silicon + Intel).
+Liquid Glass gibt es ab macOS 26 — davor rendert dieselbe App eine
+Material-Optik (`GlassCompat.swift`). Kein Sandbox-Entitlement nötig.
 
 ## Hinweise
 

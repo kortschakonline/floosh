@@ -26,12 +26,12 @@ if ! swift build -c release; then
   [[ -f "$PLUGIN" ]] || { echo "✗ $PLUGIN fehlt (Xcode installiert?)"; exit 1 }
   mkdir -p .build/release
   "$XC/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
-    -O -parse-as-library -target arm64-apple-macos26.0 \
+    -O -parse-as-library -target arm64-apple-macos14.0 \
     -sdk "$XC/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" \
     -load-plugin-library "$PLUGIN" \
     Sources/Floosh/*.swift Sources/FlooshShared/*.swift -o "$BIN"
   "$XC/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
-    -O -target arm64-apple-macos26.0 \
+    -O -target arm64-apple-macos14.0 \
     -sdk "$XC/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" \
     Sources/FlooshFanHelper/*.swift Sources/FlooshShared/*.swift -o "$HELPER_BIN"
 fi
@@ -66,11 +66,11 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.1.0</string>
+	<string>1.1.1</string>
 	<key>CFBundleVersion</key>
-	<string>2</string>
+	<string>3</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>26.0</string>
+	<string>14.0</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHighResolutionCapable</key>

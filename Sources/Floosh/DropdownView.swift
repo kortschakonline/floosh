@@ -7,7 +7,7 @@ struct DropdownView: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        GlassEffectContainer(spacing: 12) {
+        CompatGlassContainer(spacing: 12) {
             VStack(spacing: 12) {
                 header
 
@@ -36,7 +36,7 @@ struct DropdownView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .frame(width: 16, height: 16)
             }
-            .buttonStyle(.glass)
+            .compatGlassButton()
             .help("Einstellungen …")
 
             Button {
@@ -46,7 +46,7 @@ struct DropdownView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .frame(width: 16, height: 16)
             }
-            .buttonStyle(.glass)
+            .compatGlassButton()
             .help("floosh beenden")
         }
         .padding(.horizontal, 2)

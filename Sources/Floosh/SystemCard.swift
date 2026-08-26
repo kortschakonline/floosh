@@ -17,7 +17,7 @@ struct SystemCard: View {
             }
         }
         .padding(12)
-        .cardGlass(.regular)
+        .cardGlass()
         .onAppear { fans.refreshHelperState() }
     }
 
@@ -176,7 +176,7 @@ struct SystemCard: View {
                 .monospacedDigit()
                 .frame(minWidth: 26)
         }
-        .buttonStyle(.glass)
+        .compatGlassButton()
         .controlSize(.small)
         .contextMenu {
             Button("Aktuellen Wert (\(Int(fans.percent)) %) als Favorit speichern") {
@@ -194,14 +194,14 @@ struct SystemCard: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Button("Helfer aktivieren …") { fans.registerHelper() }
-                    .buttonStyle(.glass)
+                    .compatGlassButton()
                     .controlSize(.small)
             case .needsApproval:
                 Text("Bitte floosh in Systemeinstellungen → Anmeldeobjekte erlauben.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Button("Systemeinstellungen öffnen …") { fans.openApprovalSettings() }
-                    .buttonStyle(.glass)
+                    .compatGlassButton()
                     .controlSize(.small)
             case .unavailable(let reason):
                 Text(reason)

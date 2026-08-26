@@ -4,7 +4,9 @@ import PackageDescription
 let package = Package(
     name: "Floosh",
     platforms: [
-        .macOS("26.0")
+        // Ab macOS 14 lauffähig (Intel-Macs/Hackintoshes); Liquid Glass
+        // gibt es ab macOS 26, davor greift die Material-Optik (GlassCompat)
+        .macOS("14.0")
     ],
     targets: [
         // Gemeinsamer SMC-Zugriff + XPC-Protokoll für App und Helper

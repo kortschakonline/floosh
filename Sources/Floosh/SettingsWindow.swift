@@ -6,22 +6,41 @@ struct SettingsWindow: View {
     @Bindable var engine: StatsEngine
 
     var body: some View {
-        TabView {
-            Tab("Anzeige", systemImage: "paintbrush") {
+        tabs
+            .frame(width: 420)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Die `Tab`-Syntax gibt es erst ab macOS 15 — davor `tabItem`.
+    @ViewBuilder
+    private var tabs: some View {
+        if #available(macOS 15.0, *) {
+            TabView {
+                Tab("Anzeige", systemImage: "paintbrush") {
+                    displayTab
+                }
+                Tab("Messung", systemImage: "gauge.with.dots.needle.67percent") {
+                    measurementTab
+                }
+                Tab("Lüfter", systemImage: "fan") {
+                    FanSettingsTab(fans: FanService.shared)
+                }
+                Tab("Allgemein", systemImage: "gearshape") {
+                    generalTab
+                }
+            }
+        } else {
+            TabView {
                 displayTab
-            }
-            Tab("Messung", systemImage: "gauge.with.dots.needle.67percent") {
+                    .tabItem { Label("Anzeige", systemImage: "paintbrush") }
                 measurementTab
-            }
-            Tab("Lüfter", systemImage: "fan") {
+                    .tabItem { Label("Messung", systemImage: "gauge.with.dots.needle.67percent") }
                 FanSettingsTab(fans: FanService.shared)
-            }
-            Tab("Allgemein", systemImage: "gearshape") {
+                    .tabItem { Label("Lüfter", systemImage: "fan") }
                 generalTab
+                    .tabItem { Label("Allgemein", systemImage: "gearshape") }
             }
         }
-        .frame(width: 420)
-        .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: Anzeige
@@ -151,7 +170,7 @@ private struct GeneralSettingsTab: View {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 5) {
                         FlooshWordmark(height: 30)
-                        Text("Version 1.1.0")
+                        Text("Version 1.1.1")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
