@@ -47,7 +47,6 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   **Raster** (alle Karten paarweise, doppelte Breite). Die Zeilenaufteilung
   liegt in `DashboardCard.rows(_:layout:)` und gilt für Dropdown und Panel;
   halbbreite Karten rendern kompakt (Werte unter dem Titel, kein Geräte-Teil).
-  Wird der Inhalt höher als der Bildschirm, scrollt das Dropdown.
 - Einstellungen in eigenem Fenster (⌘, / Zahnrad) mit Tabs **Anzeige · Messung ·
   Lüfter · Panel · Allgemein**: Stil, Symbol, Einheit MB/s / Mbit/s, Menüleisten-Zusätze,
   Anordnung, Kachelgröße Klein/Mittel/Groß, Markierung der aktiven Kachel,

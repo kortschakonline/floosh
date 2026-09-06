@@ -18,24 +18,10 @@ struct DropdownView: View {
         .frame(width: engine.dropdownWidth)
     }
 
-    /// Der Inhalt wird scrollbar, sobald er höher als der Bildschirm wäre —
-    /// mit Ablage und großen Kacheln passen sonst nicht alle Karten.
-    /// `ImageRenderer` stellt ScrollView-Inhalte nicht dar, im Snapshot-Modus
-    /// bleibt der Stapel deshalb ungescrollt.
-    @ViewBuilder
+    /// Kein ScrollView: Das Fenster von `MenuBarExtra` fragt nur die Idealgröße
+    /// des Inhalts ab — ein ScrollView meldet dort keine und das Fenster
+    /// schrumpft auf einen Strich zusammen.
     private func content(size: CardSize) -> some View {
-        if DebugSnapshot.isActive {
-            stack(size: size)
-        } else {
-            ScrollView {
-                stack(size: size)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .frame(maxHeight: Self.maxContentHeight)
-        }
-    }
-
-    private func stack(size: CardSize) -> some View {
         VStack(spacing: size.outerSpacing) {
             header
 
@@ -59,11 +45,6 @@ struct DropdownView: View {
             footer
         }
         .padding(size.outerPadding)
-    }
-
-    /// Platz unterhalb der Menüleiste auf dem Bildschirm mit der Menüleiste.
-    private static var maxContentHeight: CGFloat {
-        max(400, (NSScreen.screens.first?.visibleFrame.height ?? 900) - 12)
     }
 
     /// Die vier Mess-Karten, dahinter optional die Ablage.
