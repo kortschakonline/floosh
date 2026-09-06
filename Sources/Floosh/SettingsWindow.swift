@@ -8,6 +8,7 @@ enum SettingsTab: String, CaseIterable {
 /// Eigenständiges Einstellungs-Fenster (⌘,) mit Tabs — hier ist Platz für mehr.
 struct SettingsWindow: View {
     @Bindable var engine: StatsEngine
+    @Bindable private var shelf = FileShelf.shared
     @State private var selectedTab: SettingsTab
 
     init(engine: StatsEngine, initialTab: SettingsTab = .display) {
@@ -135,6 +136,16 @@ struct SettingsWindow: View {
 
                 Toggle("Spitzenwerte anzeigen", isOn: $engine.showPeaks)
                 Toggle("Einzelne Geräte anzeigen", isOn: $engine.showDevices)
+            }
+
+            Section("Ablage") {
+                Toggle("Ablage im Dropdown anzeigen", isOn: $shelf.showInDropdown)
+                    .featureGated(.fileShelf)
+                Toggle("Beim Beenden von floosh leeren", isOn: $shelf.clearOnQuit)
+                    .featureGated(.fileShelf)
+                Text("Dateien in die Ablage ziehen, um sie kurz zu parken, und von dort weiterziehen. floosh merkt sich nur den Ort und kopiert nichts. Im Desktop-Panel lässt sich die Ablage unter „Karten\u{201C} zuschalten.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

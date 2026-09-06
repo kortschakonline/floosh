@@ -5,6 +5,9 @@ import Charts
 struct GroupCard: View {
     let engine: StatsEngine
     let group: SpeedGroup
+    /// Halbe Breite im geteilten Layout: Kopfzeile gestapelt, ohne
+    /// Spitzenwerte und Geräteliste.
+    var compact = false
 
     private var isSelected: Bool { engine.selectedGroup == group }
     private var size: CardSize { engine.cardSize }
@@ -15,40 +18,11 @@ struct GroupCard: View {
         Button {
             withAnimation(.snappy(duration: 0.25)) { engine.selectedGroup = group }
         } label: {
-            VStack(alignment: .leading, spacing: size.spacing) {
-                // Kopfzeile: Symbol, Titel, große Zahlen
-                HStack(alignment: .center, spacing: 10) {
-                    CardIcon(symbol: group.symbol, tint: group.tint, size: size)
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(group.title)
-                            .font(size.titleFont)
-                        Text(subtitle(state))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer(minLength: 8)
-
-                    VStack(alignment: .trailing, spacing: 1) {
-                        speedRow(glyph: group.readGlyph,
-                                 value: state.read,
-                                 color: group.tint)
-                        speedRow(glyph: group.writeGlyph,
-                                 value: state.write,
-                                 color: group.tint.opacity(0.55))
-                    }
-                }
-
-                SpeedChart(engine: engine, group: group)
-                    .frame(height: size.chartHeight)
-
-                if engine.showPeaks {
-                    peaksRow
-                }
-
-                if engine.showDevices, !state.devices.isEmpty {
-                    deviceList(state.devices)
+            VStack(alignment: .leading, spacing: compact ? size.spacing * 0.7 : size.spacing) {
+                if compact {
+                    compactContent(state)
+                } else {
+                    fullContent(state)
                 }
             }
             // Im Raster füllt die Karte die Zeilenhöhe (Glas bis zum Rand)
@@ -66,6 +40,70 @@ struct GroupCard: View {
         .buttonStyle(.plain)
         .cardGlass(tint: selectionTint, interactive: true, cornerRadius: size.cornerRadius)
         .help("In der Menüleiste anzeigen: \(group.title)")
+    }
+
+    /// Volle Breite: Werte rechts neben dem Titel, darunter Diagramm,
+    /// Spitzenwerte und Geräte.
+    @ViewBuilder
+    private func fullContent(_ state: StatsEngine.GroupState) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            CardIcon(symbol: group.symbol, tint: group.tint, size: size)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(group.title)
+                    .font(size.titleFont)
+                Text(subtitle(state))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 1) {
+                speedRow(glyph: group.readGlyph, value: state.read, color: group.tint)
+                speedRow(glyph: group.writeGlyph, value: state.write, color: group.tint.opacity(0.55))
+            }
+        }
+
+        SpeedChart(engine: engine, group: group)
+            .frame(height: size.chartHeight)
+
+        if engine.showPeaks {
+            peaksRow
+        }
+
+        if engine.showDevices, !state.devices.isEmpty {
+            deviceList(state.devices)
+        }
+    }
+
+    /// Halbe Breite: Titel oben, Werte darunter, kleines Diagramm — das
+    /// Ergebnis ist ungefähr quadratisch.
+    @ViewBuilder
+    private func compactContent(_ state: StatsEngine.GroupState) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            CardIcon(symbol: group.symbol, tint: group.tint, size: size)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(group.title)
+                    .font(size.titleFont)
+                    .lineLimit(1)
+                Text(subtitle(state))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Spacer(minLength: 0)
+        }
+
+        VStack(alignment: .leading, spacing: 1) {
+            speedRow(glyph: group.readGlyph, value: state.read, color: group.tint)
+            speedRow(glyph: group.writeGlyph, value: state.write, color: group.tint.opacity(0.55))
+        }
+
+        SpeedChart(engine: engine, group: group)
+            .frame(height: size.chartHeight * 0.85)
     }
 
     // MARK: Markierung der aktiven Karte

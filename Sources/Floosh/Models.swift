@@ -119,11 +119,78 @@ enum MenuThermalStyle: String, CaseIterable, Identifiable {
     }
 }
 
+/// Eine Karte im Dropdown bzw. im Desktop-Panel. Die Rohwerte landen in den
+/// Einstellungen — bestehende Namen bleiben deshalb unverändert.
+enum DashboardCard: String, CaseIterable, Identifiable {
+    case system
+    case internalDrives = "intern"
+    case externalDrives = "extern"
+    case network = "netzwerk"
+    case shelf
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: "System"
+        case .internalDrives: SpeedGroup.internalDrives.title
+        case .externalDrives: SpeedGroup.externalDrives.title
+        case .network: SpeedGroup.network.title
+        case .shelf: "Ablage"
+        }
+    }
+
+    /// Karten, die sich im geteilten Layout eine Zeile teilen: die beiden
+    /// Laufwerks-Karten — sie sind schmal genug für zwei Quadrate nebeneinander.
+    private var sharesRowWhenSplit: Bool {
+        self == .internalDrives || self == .externalDrives
+    }
+
+    /// Teilt die Karten in Zeilen: Liste = je eine, Raster = Paare,
+    /// Geteilt = Intern und Extern nebeneinander, der Rest über die Breite.
+    static func rows(_ cards: [DashboardCard], layout: DropdownLayout) -> [[DashboardCard]] {
+        switch layout {
+        case .list:
+            return cards.map { [$0] }
+        case .grid:
+            return stride(from: 0, to: cards.count, by: 2).map { i in
+                Array(cards[i..<min(i + 2, cards.count)])
+            }
+        case .split:
+            var rows: [[DashboardCard]] = []
+            var pair: [DashboardCard] = []
+            for card in cards {
+                if card.sharesRowWhenSplit {
+                    pair.append(card)
+                    if pair.count == 2 { rows.append(pair); pair = [] }
+                } else {
+                    if !pair.isEmpty { rows.append(pair); pair = [] }
+                    rows.append([card])
+                }
+            }
+            if !pair.isEmpty { rows.append(pair) }
+            return rows
+        }
+    }
+}
+
 /// Anordnung der Karten im Dropdown.
 enum DropdownLayout: String, CaseIterable, Identifiable {
-    case list, grid
+    /// Untereinander, jede Karte über die volle Breite.
+    case list
+    /// Wie Liste, aber Intern und Extern teilen sich eine Zeile.
+    case split
+    /// Alle Karten paarweise nebeneinander — doppelte Fensterbreite.
+    case grid
+
     var id: String { rawValue }
-    var title: String { self == .list ? "Liste" : "Raster" }
+    var title: String {
+        switch self {
+        case .list: "Liste"
+        case .split: "Geteilt"
+        case .grid: "Raster"
+        }
+    }
 }
 
 /// Darstellung von CPU- & GPU-Auslastung in der Menüleiste (zweizeilig).

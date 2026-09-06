@@ -41,20 +41,33 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   als `NSImage` gerendert — MenuBarExtra stellt mehrzeilige SwiftUI-Labels
   nicht dar und erzwingt sonst Template-Rendering.
 - Gruppe wählen: Klick auf eine Karte im Dropdown; die aktive Karte wird per
-  Rahmen, dezenter Tönung oder kräftig markiert (einstellbar). Anordnung als
-  Liste oder 2×2-Raster.
+  Rahmen, dezenter Tönung oder kräftig markiert (einstellbar). Anordnung:
+  **Liste** (alles untereinander), **Geteilt** (Intern und Extern als zwei
+  Quadrate nebeneinander — spart rund 190 pt Höhe, gleiche Fensterbreite) oder
+  **Raster** (alle Karten paarweise, doppelte Breite). Die Zeilenaufteilung
+  liegt in `DashboardCard.rows(_:layout:)` und gilt für Dropdown und Panel;
+  halbbreite Karten rendern kompakt (Werte unter dem Titel, kein Geräte-Teil).
+  Wird der Inhalt höher als der Bildschirm, scrollt das Dropdown.
 - Einstellungen in eigenem Fenster (⌘, / Zahnrad) mit Tabs **Anzeige · Messung ·
   Lüfter · Panel · Allgemein**: Stil, Symbol, Einheit MB/s / Mbit/s, Menüleisten-Zusätze,
   Anordnung, Kachelgröße Klein/Mittel/Groß, Markierung der aktiven Kachel,
   Intervall 0,5–2 s, Diagramm-Fenster 30–120 s, Quellen-Toggles,
   Lüfterkurven-Editor (Sensor, bis zu 8 Stützpunkte, Live-Marker),
-  Lüfter-Favoriten & Helper-Status, Login-Start (`SMAppService`), Update-Check.
+  Lüfter-Favoriten & Helper-Status, Ablage, Login-Start (`SMAppService`),
+  Update-Check.
 - Desktop-Panel (`DesktopPanel.swift`): rahmenloses, transparentes `NSPanel`
   mit denselben Karten — auf Desktop-Ebene (`desktopIconWindow − 1`, hinter
   allen Fenstern, auf allen Schreibtischen) oder `.floating`. Ecke + Randabstand,
   Deckkraft, Liste/Raster, Kartenauswahl, Ziel-Bildschirm; Fenstergröße folgt
   dem SwiftUI-Inhalt (`sizingOptions = .preferredContentSize`), danach wird
   an der Ecke neu ausgerichtet. Schalter im Dropdown-Kopf und Tab **Panel**.
+- Ablage (`FileShelf.swift`, `ShelfCard.swift`): Dateien kurz parken — als Karte
+  im Dropdown und im Desktop-Panel. Hinein per Drop (`dropDestination`), über die
+  Dateiauswahl oder aus der Zwischenablage; heraus per `NSItemProvider(contentsOf:)`,
+  also als echte Datei-Referenz in Finder und andere Apps. Vorschaubilder aus
+  QuickLook (`QLThumbnailGenerator`, als PNG-Daten über die Isolationsgrenze),
+  gespeichert werden Bookmarks — Umbenennen und Verschieben verlieren den Eintrag
+  nicht, Gelöschtes wird orange markiert. Kopiert wird nichts, max. 20 Einträge.
 - Update-Hinweis: `UpdateChecker` fragt beim Start und alle 6 Stunden die
   GitHub-Releases-API (`releases/latest`) ab und vergleicht das Tag mit der
   Bundle-Version; neue Versionen erscheinen als Zeile im Dropdown und unter
@@ -81,6 +94,11 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   <img src="docs/shot-panel.png" alt="Desktop-Panel auf dem Schreibtisch" width="360" align="top">
   &nbsp;&nbsp;
   <img src="docs/shot-panel-settings.png" alt="Einstellungen — Panel" width="380" align="top">
+</p>
+<p>
+  <img src="docs/shot-split.png" alt="Dropdown im geteilten Layout: Intern und Extern nebeneinander, darunter die Ablage" width="330" align="top">
+  &nbsp;&nbsp;
+  <img src="docs/shot-shelf.png" alt="Ablage: geparkte Dateien mit QuickLook-Vorschau" width="330" align="top">
 </p>
 
 ## Bauen

@@ -37,18 +37,8 @@ final class PanelSettings {
         }
     }
 
-    enum Card: String, CaseIterable, Identifiable {
-        case system, internalDrives = "intern", externalDrives = "extern", network = "netzwerk"
-        var id: String { rawValue }
-        var title: String {
-            switch self {
-            case .system: "System"
-            case .internalDrives: SpeedGroup.internalDrives.title
-            case .externalDrives: SpeedGroup.externalDrives.title
-            case .network: SpeedGroup.network.title
-            }
-        }
-    }
+    /// Die Karten sind dieselben wie im Dropdown.
+    typealias Card = DashboardCard
 
     var enabled: Bool { didSet { defaults.set(enabled, forKey: "panel.enabled") } }
     var level: Level { didSet { defaults.set(level.rawValue, forKey: "panel.level") } }
@@ -73,7 +63,7 @@ final class PanelSettings {
         opacity = defaults.object(forKey: "panel.opacity") as? Double ?? 1
         layout = DropdownLayout(rawValue: defaults.string(forKey: "panel.layout") ?? "") ?? .list
         let saved = defaults.stringArray(forKey: "panel.cards")?.compactMap(Card.init(rawValue:))
-        cards = saved.map(Set.init) ?? Set(Card.allCases)
+        cards = saved.map(Set.init) ?? Set(Card.allCases.filter { $0 != .shelf })
         allSpaces = defaults.object(forKey: "panel.allSpaces") as? Bool ?? true
         screenName = defaults.string(forKey: "panel.screen") ?? ""
     }
@@ -112,18 +102,18 @@ struct DesktopPanelView: View {
                         .padding(size.padding)
                         .frame(maxWidth: .infinity)
                         .cardGlass(cornerRadius: size.cornerRadius)
-                } else if grid {
-                    ForEach(Array(stride(from: 0, to: cards.count, by: 2)), id: \.self) { i in
-                        HStack(alignment: .top, spacing: size.outerSpacing) {
-                            card(cards[i])
-                            if i + 1 < cards.count {
-                                card(cards[i + 1])
-                            }
-                        }
-                        .fixedSize(horizontal: false, vertical: true)
-                    }
                 } else {
-                    ForEach(cards) { card($0) }
+                    let rows = DashboardCard.rows(cards, layout: settings.layout)
+                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                        if row.count == 1 {
+                            card(row[0])
+                        } else {
+                            HStack(alignment: .top, spacing: size.outerSpacing) {
+                                ForEach(row) { card($0, compact: settings.layout == .split) }
+                            }
+                            .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
             }
             // Etwas Luft, damit Glas-Ränder und Hover-Highlights nicht am
@@ -133,14 +123,8 @@ struct DesktopPanelView: View {
         .frame(width: (grid ? size.gridWidth - 2 * size.outerPadding : size.dropdownWidth - 2 * size.outerPadding) + 8)
     }
 
-    @ViewBuilder
-    private func card(_ card: PanelSettings.Card) -> some View {
-        switch card {
-        case .system: SystemCard(engine: engine, fans: fans)
-        case .internalDrives: GroupCard(engine: engine, group: .internalDrives)
-        case .externalDrives: GroupCard(engine: engine, group: .externalDrives)
-        case .network: GroupCard(engine: engine, group: .network)
-        }
+    private func card(_ card: DashboardCard, compact: Bool = false) -> some View {
+        DashboardCardView(card: card, engine: engine, fans: fans, compact: compact)
     }
 }
 

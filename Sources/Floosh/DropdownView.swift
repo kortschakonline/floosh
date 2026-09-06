@@ -7,53 +7,76 @@ struct DropdownView: View {
     var fans: FanService = .shared
     var updates: UpdateChecker = .shared
     var panel: PanelSettings = .shared
+    var shelf: FileShelf = .shared
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         let size = engine.cardSize
-        let grid = engine.layout == .grid
         CompatGlassContainer(spacing: size.outerSpacing) {
-            VStack(spacing: size.outerSpacing) {
-                header
-
-                if let release = updates.available {
-                    updateBanner(release)
-                }
-
-                if grid {
-                    gridRow {
-                        SystemCard(engine: engine, fans: fans)
-                    } trailing: {
-                        GroupCard(engine: engine, group: .internalDrives)
-                    }
-                    gridRow {
-                        GroupCard(engine: engine, group: .externalDrives)
-                    } trailing: {
-                        GroupCard(engine: engine, group: .network)
-                    }
-                } else {
-                    SystemCard(engine: engine, fans: fans)
-                    ForEach(SpeedGroup.allCases) { group in
-                        GroupCard(engine: engine, group: group)
-                    }
-                }
-
-                footer
-            }
-            .padding(size.outerPadding)
+            content(size: size)
         }
         .frame(width: engine.dropdownWidth)
     }
 
-    /// Zwei Karten nebeneinander mit gleicher Höhe: `fixedSize` gibt der
-    /// Zeile ihre Idealhöhe (die höhere Karte), die Karten füllen sie auf.
-    private func gridRow<A: View, B: View>(@ViewBuilder leading: () -> A,
-                                           @ViewBuilder trailing: () -> B) -> some View {
-        HStack(alignment: .top, spacing: engine.cardSize.outerSpacing) {
-            leading()
-            trailing()
+    /// Der Inhalt wird scrollbar, sobald er höher als der Bildschirm wäre —
+    /// mit Ablage und großen Kacheln passen sonst nicht alle Karten.
+    /// `ImageRenderer` stellt ScrollView-Inhalte nicht dar, im Snapshot-Modus
+    /// bleibt der Stapel deshalb ungescrollt.
+    @ViewBuilder
+    private func content(size: CardSize) -> some View {
+        if DebugSnapshot.isActive {
+            stack(size: size)
+        } else {
+            ScrollView {
+                stack(size: size)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(maxHeight: Self.maxContentHeight)
         }
-        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func stack(size: CardSize) -> some View {
+        VStack(spacing: size.outerSpacing) {
+            header
+
+            if let release = updates.available {
+                updateBanner(release)
+            }
+
+            let rows = DashboardCard.rows(visibleCards, layout: engine.layout)
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                if row.count == 1 {
+                    card(row[0])
+                } else {
+                    HStack(alignment: .top, spacing: size.outerSpacing) {
+                        ForEach(row) { card($0, compact: engine.layout == .split) }
+                    }
+                    // Beide Karten der Zeile bekommen dieselbe Höhe
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            footer
+        }
+        .padding(size.outerPadding)
+    }
+
+    /// Platz unterhalb der Menüleiste auf dem Bildschirm mit der Menüleiste.
+    private static var maxContentHeight: CGFloat {
+        max(400, (NSScreen.screens.first?.visibleFrame.height ?? 900) - 12)
+    }
+
+    /// Die vier Mess-Karten, dahinter optional die Ablage.
+    private var visibleCards: [DashboardCard] {
+        var cards: [DashboardCard] = [.system, .internalDrives, .externalDrives, .network]
+        if shelf.showInDropdown, Entitlements.shared.isUnlocked(.fileShelf) {
+            cards.append(.shelf)
+        }
+        return cards
+    }
+
+    private func card(_ card: DashboardCard, compact: Bool = false) -> some View {
+        DashboardCardView(card: card, engine: engine, fans: fans, shelf: shelf, compact: compact)
     }
 
     private var header: some View {
@@ -125,5 +148,26 @@ struct DropdownView: View {
         .frame(maxWidth: .infinity, alignment: .trailing)
         .padding(.horizontal, 2)
         .padding(.top, -4)
+    }
+}
+
+
+/// Wählt die passende Karte — gemeinsam genutzt von Dropdown und Desktop-Panel.
+struct DashboardCardView: View {
+    let card: DashboardCard
+    let engine: StatsEngine
+    var fans: FanService = .shared
+    var shelf: FileShelf = .shared
+    /// Halbe Breite (geteiltes Layout) — nur die Laufwerks-Karten kennen das.
+    var compact = false
+
+    var body: some View {
+        switch card {
+        case .system: SystemCard(engine: engine, fans: fans)
+        case .internalDrives: GroupCard(engine: engine, group: .internalDrives, compact: compact)
+        case .externalDrives: GroupCard(engine: engine, group: .externalDrives, compact: compact)
+        case .network: GroupCard(engine: engine, group: .network, compact: compact)
+        case .shelf: ShelfCard(engine: engine, shelf: shelf)
+        }
     }
 }

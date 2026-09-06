@@ -13,6 +13,8 @@ enum Feature: String, CaseIterable, Identifiable {
     case menuChannel, menuThermal, menuSparkline, menuHideIdle, menuTintText
     // Desktop-Panel
     case desktopPanel
+    // Ablage
+    case fileShelf
     // Allgemein
     case updateCheck
 

@@ -42,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Manuelle Lüftersteuerung nicht verwaist zurücklassen
         MainActor.assumeIsolated {
             FanService.shared.relinquishOnQuit()
+            FileShelf.shared.clearOnQuitIfNeeded()
         }
     }
 }
