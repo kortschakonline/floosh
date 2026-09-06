@@ -48,7 +48,7 @@ enum DebugSnapshot {
         for scheme in [ColorScheme.dark, ColorScheme.light] {
             let name = scheme == .dark ? "dropdown-dark" : "dropdown-light"
             let view = DropdownView(engine: engine)
-                .frame(width: 340)
+                .frame(width: engine.cardSize.dropdownWidth)
                 .background(scheme == .dark ? Color(white: 0.12) : Color(white: 0.92))
                 .environment(\.colorScheme, scheme)
             let renderer = ImageRenderer(content: view)

@@ -1,13 +1,23 @@
 import SwiftUI
 import ServiceManagement
 
+enum SettingsTab: String, CaseIterable {
+    case display, measurement, fans, general
+}
+
 /// Eigenständiges Einstellungs-Fenster (⌘,) mit Tabs — hier ist Platz für mehr.
 struct SettingsWindow: View {
     @Bindable var engine: StatsEngine
+    @State private var selectedTab: SettingsTab
+
+    init(engine: StatsEngine, initialTab: SettingsTab = .display) {
+        self.engine = engine
+        _selectedTab = State(initialValue: initialTab)
+    }
 
     var body: some View {
         tabs
-            .frame(width: 420)
+            .frame(width: 440)
             .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -15,30 +25,34 @@ struct SettingsWindow: View {
     @ViewBuilder
     private var tabs: some View {
         if #available(macOS 15.0, *) {
-            TabView {
-                Tab("Anzeige", systemImage: "paintbrush") {
+            TabView(selection: $selectedTab) {
+                Tab("Anzeige", systemImage: "paintbrush", value: .display) {
                     displayTab
                 }
-                Tab("Messung", systemImage: "gauge.with.dots.needle.67percent") {
+                Tab("Messung", systemImage: "gauge.with.dots.needle.67percent", value: .measurement) {
                     measurementTab
                 }
-                Tab("Lüfter", systemImage: "fan") {
+                Tab("Lüfter", systemImage: "fan", value: .fans) {
                     FanSettingsTab(fans: FanService.shared)
                 }
-                Tab("Allgemein", systemImage: "gearshape") {
+                Tab("Allgemein", systemImage: "gearshape", value: .general) {
                     generalTab
                 }
             }
         } else {
-            TabView {
+            TabView(selection: $selectedTab) {
                 displayTab
                     .tabItem { Label("Anzeige", systemImage: "paintbrush") }
+                    .tag(SettingsTab.display)
                 measurementTab
                     .tabItem { Label("Messung", systemImage: "gauge.with.dots.needle.67percent") }
+                    .tag(SettingsTab.measurement)
                 FanSettingsTab(fans: FanService.shared)
                     .tabItem { Label("Lüfter", systemImage: "fan") }
+                    .tag(SettingsTab.fans)
                 generalTab
                     .tabItem { Label("Allgemein", systemImage: "gearshape") }
+                    .tag(SettingsTab.general)
             }
         }
     }
@@ -68,6 +82,16 @@ struct SettingsWindow: View {
             .pickerStyle(.segmented)
 
             Section("Dropdown") {
+                Picker("Kachelgröße", selection: $engine.cardSize) {
+                    ForEach(CardSize.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+
+                Picker("Aktive Kachel", selection: $engine.selectionStyle) {
+                    ForEach(SelectionStyle.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+
                 Toggle("Spitzenwerte anzeigen", isOn: $engine.showPeaks)
                 Toggle("Einzelne Geräte anzeigen", isOn: $engine.showDevices)
             }
@@ -108,12 +132,44 @@ struct SettingsWindow: View {
     }
 }
 
-/// Lüfter-Tab: Drehzahl-Favoriten und Status des privilegierten Helpers.
+/// Lüfter-Tab: Temperaturkurve, Drehzahl-Favoriten und Status des
+/// privilegierten Helpers.
 private struct FanSettingsTab: View {
     @Bindable var fans: FanService
 
     var body: some View {
         Form {
+            Section("Lüfterkurve") {
+                Picker("Sensor", selection: $fans.curve.source) {
+                    ForEach(FanCurve.Source.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+
+                FanCurveChart(curve: fans.curve, temp: fans.curveTemp, target: fans.curveTarget,
+                              tint: SystemCard.tint)
+                    .frame(height: 130)
+                    .padding(.vertical, 4)
+
+                ForEach($fans.curve.points) { $point in
+                    curvePointRow($point)
+                }
+
+                HStack {
+                    Button("Punkt hinzufügen") { fans.curve.addPoint() }
+                        .disabled(fans.curve.points.count >= FanCurve.maxPoints)
+                    Spacer()
+                    Button("Standardkurve") { fans.curve = .standard }
+                        .disabled(fans.curve.points.map { ($0.temp, $0.percent) }
+                            .elementsEqual(FanCurve.standard.points.map { ($0.temp, $0.percent) }, by: ==)
+                            && fans.curve.source == FanCurve.standard.source)
+                }
+                .controlSize(.small)
+
+                Text("Im Kurven-Modus regelt floosh die Lüfter nach der Die-Temperatur: zwischen den Punkten wird linear interpoliert, die Temperatur wird geglättet (schnell hoch, langsam zurück). Der Kurven-Modus bleibt über einen Neustart aktiv.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Drehzahl-Favoriten") {
                 favoriteRow(label: "Favorit 1", value: $fans.favorite1)
                 favoriteRow(label: "Favorit 2", value: $fans.favorite2)
@@ -138,13 +194,49 @@ private struct FanSettingsTab: View {
                             .foregroundStyle(.orange)
                     }
                 }
-                Text("Manuelle Lüftersteuerung braucht einen kleinen Root-Helfer (einmalige Freigabe unter Anmeldeobjekte). Sicherheitsnetz: Ohne Lebenszeichen der App schaltet er nach 3 Minuten selbstständig zurück auf Automatik.")
+                Text("Manuelle Lüftersteuerung und Kurve brauchen einen kleinen Root-Helfer (einmalige Freigabe unter Anmeldeobjekte). Sicherheitsnetz: Ohne Lebenszeichen der App schaltet er nach 3 Minuten selbstständig zurück auf Automatik.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
         .onAppear { fans.refreshHelperState() }
+    }
+
+    /// Ein Stützpunkt: Temperatur-Regler, Prozent-Regler, Entfernen-Knopf.
+    /// Nach dem Loslassen des Temperatur-Reglers wird die Liste neu sortiert.
+    private func curvePointRow(_ point: Binding<FanCurve.Point>) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "thermometer.medium")
+                .foregroundStyle(.secondary)
+                .frame(width: 14)
+            Slider(value: point.temp, in: FanCurve.tempRange, step: 1) { editing in
+                if !editing { fans.curve.normalize() }
+            }
+            Text("\(Int(point.wrappedValue.temp)) °C")
+                .monospacedDigit()
+                .frame(width: 46, alignment: .trailing)
+
+            Image(systemName: "fan")
+                .foregroundStyle(.secondary)
+                .frame(width: 14)
+                .padding(.leading, 6)
+            Slider(value: point.percent, in: 0...100, step: 5)
+            Text("\(Int(point.wrappedValue.percent)) %")
+                .monospacedDigit()
+                .frame(width: 40, alignment: .trailing)
+
+            Button {
+                fans.curve.points.removeAll { $0.id == point.wrappedValue.id }
+            } label: {
+                Image(systemName: "minus.circle")
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+            .disabled(fans.curve.points.count <= 2)
+            .help("Punkt entfernen")
+        }
+        .controlSize(.small)
     }
 
     private func favoriteRow(label: String, value: Binding<Double>) -> some View {
@@ -170,7 +262,7 @@ private struct GeneralSettingsTab: View {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 5) {
                         FlooshWordmark(height: 30)
-                        Text("Version 1.1.1")
+                        Text("Version 1.2.0")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

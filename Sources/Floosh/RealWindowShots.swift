@@ -16,11 +16,13 @@ import AppKit
 enum RealWindowShots {
 
     static func run(engine: StatsEngine) async {
-        // `--shoot settings`: nur das Einstellungsfenster, ohne Warmlaufphase
-        if let idx = CommandLine.arguments.firstIndex(of: "--shoot"),
-           CommandLine.arguments.count > idx + 1,
-           CommandLine.arguments[idx + 1] == "settings" {
-            await presentSettings(engine: engine)
+        // `--shoot settings [display|measurement|fans|general]`: nur das
+        // Einstellungsfenster (optional mit Start-Tab), ohne Warmlaufphase
+        let args = CommandLine.arguments
+        if let idx = args.firstIndex(of: "--shoot"),
+           args.count > idx + 1, args[idx + 1] == "settings" {
+            let tab = args.count > idx + 2 ? SettingsTab(rawValue: args[idx + 2]) : nil
+            await presentSettings(engine: engine, tab: tab ?? .display)
             return
         }
 
@@ -39,7 +41,7 @@ enum RealWindowShots {
 
     private static func presentDropdown(engine: StatsEngine) async {
         // Panel: das Dropdown mit der dunklen Glas-Rückwand des Menü-Fensters
-        let panel = makeWindow(size: NSSize(width: 340, height: 1))
+        let panel = makeWindow(size: NSSize(width: engine.cardSize.dropdownWidth, height: 1))
         panel.contentView = NSHostingView(rootView:
             DropdownView(engine: engine)
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 26))
@@ -72,7 +74,7 @@ enum RealWindowShots {
 
     // MARK: Einstellungen
 
-    private static func presentSettings(engine: StatsEngine) async {
+    private static func presentSettings(engine: StatsEngine, tab: SettingsTab = .display) async {
         let window = NSWindow(contentRect: .zero,
                               styleMask: [.titled, .closable],
                               backing: .buffered, defer: false)
@@ -86,7 +88,7 @@ enum RealWindowShots {
         // unter die Fensterknöpfe (NSHostingView zieht das Fenster sonst
         // wieder auf die Idealbreite zusammen)
         window.contentView = NSHostingView(rootView:
-            SettingsWindow(engine: engine).frame(width: 520))
+            SettingsWindow(engine: engine, initialTab: tab).frame(width: 520))
         window.setContentSize(window.contentView!.fittingSize)
         center(window)
         window.orderFront(nil)
@@ -111,8 +113,10 @@ enum RealWindowShots {
         return w
     }
 
+    /// Auf dem Primärbildschirm zentrieren — derselbe, auf den sich
+    /// `announceRegion` bezieht (bei mehreren Displays sonst falsche Region).
     private static func center(_ window: NSWindow) {
-        guard let screen = NSScreen.main else { return }
+        guard let screen = NSScreen.screens.first else { return }
         let f = window.frame
         window.setFrameOrigin(NSPoint(x: (screen.frame.midX - f.width / 2).rounded(),
                                       y: (screen.frame.midY - f.height / 2).rounded()))

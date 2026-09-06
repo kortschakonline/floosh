@@ -7,8 +7,9 @@ struct DropdownView: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        CompatGlassContainer(spacing: 12) {
-            VStack(spacing: 12) {
+        let size = engine.cardSize
+        CompatGlassContainer(spacing: size.outerSpacing) {
+            VStack(spacing: size.outerSpacing) {
                 header
 
                 SystemCard(engine: engine, fans: fans)
@@ -19,9 +20,9 @@ struct DropdownView: View {
 
                 footer
             }
-            .padding(14)
+            .padding(size.outerPadding)
         }
-        .frame(width: 340)
+        .frame(width: size.dropdownWidth)
     }
 
     private var header: some View {

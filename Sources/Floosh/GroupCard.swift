@@ -7,6 +7,7 @@ struct GroupCard: View {
     let group: SpeedGroup
 
     private var isSelected: Bool { engine.selectedGroup == group }
+    private var size: CardSize { engine.cardSize }
 
     var body: some View {
         let state = engine.state(for: group)
@@ -14,18 +15,14 @@ struct GroupCard: View {
         Button {
             withAnimation(.snappy(duration: 0.25)) { engine.selectedGroup = group }
         } label: {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: size.spacing) {
                 // Kopfzeile: Symbol, Titel, große Zahlen
                 HStack(alignment: .center, spacing: 10) {
-                    Image(systemName: group.symbol)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(group.tint)
-                        .frame(width: 34, height: 34)
-                        .background(group.tint.opacity(0.16), in: .circle)
+                    CardIcon(symbol: group.symbol, tint: group.tint, size: size)
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text(group.title)
-                            .font(.system(.body, design: .rounded, weight: .semibold))
+                            .font(size.titleFont)
                         Text(subtitle(state))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
@@ -44,7 +41,7 @@ struct GroupCard: View {
                 }
 
                 SpeedChart(engine: engine, group: group)
-                    .frame(height: 46)
+                    .frame(height: size.chartHeight)
 
                 if engine.showPeaks {
                     peaksRow
@@ -54,18 +51,38 @@ struct GroupCard: View {
                     deviceList(state.devices)
                 }
             }
-            .padding(12)
-            .contentShape(.rect(cornerRadius: 20))
-        }
-        .buttonStyle(.plain)
-        .cardGlass(tint: isSelected ? group.tint.opacity(0.22) : nil, interactive: true)
-        .overlay {
-            if isSelected {
-                RoundedRectangle(cornerRadius: 20)
-                    .strokeBorder(group.tint.opacity(0.55), lineWidth: 1.5)
+            .padding(size.padding)
+            .contentShape(.rect(cornerRadius: size.cornerRadius))
+            // Rahmen gehört zum Karteninhalt, damit er sicher über dem Glas liegt
+            .overlay {
+                if isSelected, let border = selectionBorder {
+                    RoundedRectangle(cornerRadius: size.cornerRadius)
+                        .strokeBorder(border.color, lineWidth: border.width)
+                }
             }
         }
+        .buttonStyle(.plain)
+        .cardGlass(tint: selectionTint, interactive: true, cornerRadius: size.cornerRadius)
         .help("In der Menüleiste anzeigen: \(group.title)")
+    }
+
+    // MARK: Markierung der aktiven Karte
+
+    private var selectionTint: Color? {
+        guard isSelected else { return nil }
+        switch engine.selectionStyle {
+        case .border: return nil
+        case .subtle: return group.tint.opacity(0.10)
+        case .strong: return group.tint.opacity(0.22)
+        }
+    }
+
+    private var selectionBorder: (color: Color, width: CGFloat)? {
+        switch engine.selectionStyle {
+        case .border: (group.tint.opacity(0.75), 1)
+        case .subtle: nil
+        case .strong: (group.tint.opacity(0.55), 1.5)
+        }
     }
 
     private func subtitle(_ state: StatsEngine.GroupState) -> String {
@@ -79,10 +96,10 @@ struct GroupCard: View {
     private func speedRow(glyph: String, value: Double, color: Color) -> some View {
         HStack(spacing: 4) {
             Text(glyph)
-                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .font(.system(size: size.glyphFont, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
             Text(SpeedFormat.speed(value, units: engine.units))
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: size.valueFont, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.primary)
         }
@@ -137,6 +154,21 @@ struct GroupCard: View {
             }
         }
         .padding(.top, 2)
+    }
+}
+
+/// Rundes Symbol in der Kopfzeile jeder Karte, skaliert mit der Kachelgröße.
+struct CardIcon: View {
+    let symbol: String
+    let tint: Color
+    let size: CardSize
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: size.iconFont, weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: size.iconSize, height: size.iconSize)
+            .background(tint.opacity(0.16), in: .circle)
     }
 }
 

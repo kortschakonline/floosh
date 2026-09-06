@@ -19,7 +19,7 @@ extension View {
                         in: .rect(cornerRadius: cornerRadius))
         } else if let tint {
             background(.regularMaterial, in: .rect(cornerRadius: cornerRadius))
-                .background(tint.opacity(0.5), in: .rect(cornerRadius: cornerRadius))
+                .background(tint, in: .rect(cornerRadius: cornerRadius))
         } else {
             background(.regularMaterial, in: .rect(cornerRadius: cornerRadius))
         }

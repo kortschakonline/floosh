@@ -10,9 +10,14 @@ import FlooshShared
 /// Ablauf: Der Helper liegt im App-Bundle und wird einmalig über
 /// `SMAppService.daemon` registriert — macOS verlangt dafür die Freigabe in
 /// Systemeinstellungen → Allgemein → Anmeldeobjekte. Danach kann floosh die
-/// Lüfter auf feste Drehzahlen stellen; im Manuell-Modus hält ein
-/// periodischer Ping den Helper wach, sonst kehrt er nach 3 Minuten
+/// Lüfter auf feste Drehzahlen stellen; in den Modi Manuell und Kurve hält
+/// ein periodischer Ping den Helper wach, sonst kehrt er nach 3 Minuten
 /// selbstständig zur Automatik zurück.
+///
+/// Kurven-Modus: Die App wertet die Lüfterkurve bei jeder Messrunde des
+/// StatsEngine aus (`curveTick`) und schickt dem Helper nur dann eine neue
+/// Drehzahl, wenn sich der gerundete Zielwert ändert. Der Helper selbst kennt
+/// keine Kurve — er bleibt die minimale Root-Komponente.
 @MainActor
 @Observable
 final class FanService {
@@ -20,7 +25,7 @@ final class FanService {
     static let shared = FanService()
 
     enum Mode: String {
-        case auto, manual
+        case auto, manual, curve
     }
 
     enum HelperState: Equatable {
@@ -35,18 +40,41 @@ final class FanService {
     var percent: Double
     var favorite1: Double { didSet { defaults.set(favorite1, forKey: "ds.fanFav1") } }
     var favorite2: Double { didSet { defaults.set(favorite2, forKey: "ds.fanFav2") } }
+    /// Temperaturkurve; Änderungen wirken im Kurven-Modus sofort.
+    var curve: FanCurve {
+        didSet {
+            if let data = try? JSONEncoder().encode(curve) {
+                defaults.set(data, forKey: "ds.fanCurve")
+            }
+            applyCurve(force: false)
+        }
+    }
+    /// Geglättete Sensortemperatur, die die Kurve gerade sieht.
+    private(set) var curveTemp: Double?
+    /// Aus der Kurve berechnete Zieldrehzahl in Prozent (auch außerhalb des
+    /// Kurven-Modus, als Vorschau).
+    private(set) var curveTarget: Double?
     private(set) var helperState: HelperState = .needsRegistration
     private(set) var lastError: String?
 
     private let defaults = UserDefaults.standard
     private var connection: NSXPCConnection?
     private var pingTask: Task<Void, Never>?
+    private var lastSentPercent: Double?
+    private var lastCurveTick: Date?
     private var service: SMAppService { SMAppService.daemon(plistName: fanHelperPlistName) }
 
     init() {
         percent = defaults.object(forKey: "ds.fanPercent") as? Double ?? 50
         favorite1 = defaults.object(forKey: "ds.fanFav1") as? Double ?? 40
         favorite2 = defaults.object(forKey: "ds.fanFav2") as? Double ?? 80
+        curve = defaults.data(forKey: "ds.fanCurve")
+            .flatMap { try? JSONDecoder().decode(FanCurve.self, from: $0) } ?? .standard
+        // Nur der Kurven-Modus überlebt einen Neustart — eine feste manuelle
+        // Drehzahl soll nicht unbemerkt weiterlaufen.
+        if defaults.string(forKey: "ds.fanMode") == Mode.curve.rawValue {
+            mode = .curve
+        }
         refreshHelperState()
     }
 
@@ -109,6 +137,8 @@ final class FanService {
 
     func setAuto() {
         mode = .auto
+        persistMode()
+        lastSentPercent = nil
         stopPinging()
         lastError = nil
         guard helperState == .ready else { return }
@@ -121,20 +151,81 @@ final class FanService {
         if let newPercent { percent = min(max(newPercent, 0), 100) }
         defaults.set(percent, forKey: "ds.fanPercent")
         mode = .manual
+        persistMode()
         guard helperState == .ready else { return }
         lastError = nil
-        proxy()?.setManual(percent: percent) { [weak self] error in
+        sendManual(percent)
+    }
+
+    func setCurve() {
+        mode = .curve
+        persistMode()
+        lastSentPercent = nil
+        lastError = nil
+        applyCurve(force: true)
+    }
+
+    /// Wird vom StatsEngine nach jeder Abtastung mit den aktuellen
+    /// Die-Temperaturen aufgerufen.
+    func curveTick(cpuTemp: Double?, gpuTemp: Double?) {
+        let now = Date()
+        defer { lastCurveTick = now }
+        guard let raw = curve.temperature(cpu: cpuTemp, gpu: gpuTemp) else {
+            curveTemp = nil
+            curveTarget = nil
+            return
+        }
+        // Asymmetrische Glättung: schnell hochregeln, langsam zurück —
+        // kein Flattern bei kurzen Lastspitzen, kein Nachlaufen beim Aufheizen.
+        if let prev = curveTemp, let last = lastCurveTick {
+            let dt = max(0, now.timeIntervalSince(last))
+            let tau: Double = raw > prev ? 3 : 20
+            curveTemp = prev + (1 - exp(-dt / tau)) * (raw - prev)
+        } else {
+            curveTemp = raw
+        }
+        applyCurve(force: false)
+    }
+
+    /// Zielwert aus der Kurve neu berechnen und — im Kurven-Modus — an den
+    /// Helper schicken, falls er sich geändert hat.
+    private func applyCurve(force: Bool) {
+        guard let temp = curveTemp else {
+            curveTarget = nil
+            return
+        }
+        let target = curve.percent(at: temp).rounded()
+        curveTarget = target
+        guard mode == .curve, helperState == .ready else { return }
+        guard force || target != lastSentPercent else { return }
+        sendManual(target)
+    }
+
+    private func sendManual(_ value: Double) {
+        // Optimistisch merken, damit dicht folgende Ticks nicht doppelt senden;
+        // bei Fehler zurücksetzen, damit der nächste Tick es erneut versucht.
+        lastSentPercent = value
+        proxy()?.setManual(percent: value) { [weak self] error in
             Task { @MainActor in
-                self?.lastError = error
-                if error == nil { self?.startPinging() }
+                guard let self else { return }
+                self.lastError = error
+                if error == nil {
+                    self.startPinging()
+                } else {
+                    self.lastSentPercent = nil
+                }
             }
         }
+    }
+
+    private func persistMode() {
+        defaults.set(mode == .curve ? Mode.curve.rawValue : Mode.auto.rawValue, forKey: "ds.fanMode")
     }
 
     /// Beim Beenden der App die Regelung zurückgeben (Best Effort; falls die
     /// App abstürzt, greift der Ping-Watchdog des Helpers).
     func relinquishOnQuit() {
-        guard mode == .manual, helperState == .ready else { return }
+        guard mode != .auto, helperState == .ready else { return }
         proxy()?.setAuto { _ in }
         // Dem XPC-Call einen Moment Zeit geben, bevor der Prozess endet.
         Thread.sleep(forTimeInterval: 0.15)
@@ -145,7 +236,7 @@ final class FanService {
         pingTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(30))
-                guard let self, self.mode == .manual else { return }
+                guard let self, self.mode != .auto else { return }
                 self.proxy()?.ping()
             }
         }

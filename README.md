@@ -6,8 +6,9 @@
 Mini-Menüleisten-App für macOS: zeigt den aktuellen Datendurchsatz von drei Gruppen —
 **Intern** (interne Laufwerke), **Extern** (USB/Thunderbolt-Laufwerke) und **Netzwerk**
 (physische Interfaces, Down/Up) — plus **System**: CPU- & GPU-Auslastung,
-Die-Temperaturen und Lüftersteuerung. Liquid-Glass-Dropdown mit Live-Diagrammen,
-Spitzenwerten und Geräteliste. Logo: der floosh-Doppel-Blitz (SVG-Quelle in
+Die-Temperaturen und Lüftersteuerung (manuell oder per Temperaturkurve).
+Liquid-Glass-Dropdown mit Live-Diagrammen, Spitzenwerten und Geräteliste in
+drei Kachelgrößen. Logo: der floosh-Doppel-Blitz (SVG-Quelle in
 `Logo & Icon Source/`, als Vektorpfade eingebettet in `BrandLogos.swift`,
 zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
 
@@ -19,29 +20,41 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   (`IOAccelerator` → `Device Utilization %`), Temperaturen aus dem SMC
   (`Tp*` = CPU, `Tg*` = GPU; pro physischem Sensor nur der Basis-Key der
   Dreiergruppe, die übrigen sind Kalibrier-Offsets), Lüfter über `F#Ac/Mn/Mx/Tg/Md`.
-- Lüftersteuerung Auto/Manuell: Schieberegler 0–100 % (zwischen Min- und Max-RPM)
-  plus zwei Drehzahl-Favoriten (Rechtsklick auf den Knopf speichert den aktuellen
-  Regler-Wert). SMC-Schreiben braucht Root → `FlooshFanHelper` als LaunchDaemon
-  im Bundle (`SMAppService.daemon`, einmalige Freigabe unter Anmeldeobjekte,
-  App muss dafür in `/Applications` liegen). Sicherheitsnetz: ohne Ping der App
-  stellt der Helper nach 3 Minuten selbstständig auf Automatik zurück; auch beim
-  Beenden der App wird die Regelung zurückgegeben.
+- Lüftersteuerung Auto/Manuell/Kurve: Manuell = Schieberegler 0–100 % (zwischen
+  Min- und Max-RPM) plus zwei Drehzahl-Favoriten (Rechtsklick auf den Knopf
+  speichert den aktuellen Regler-Wert). Kurve = Stützpunkte °C → % (linear
+  interpoliert, Sensor CPU / GPU / Höchste), die App wertet sie bei jeder
+  Messrunde aus und schickt dem Helper nur geänderte Zielwerte; die Temperatur
+  wird asymmetrisch geglättet (schnell hoch, langsam zurück), damit nichts
+  flattert. Der Kurven-Modus überlebt als einziger einen Neustart. SMC-Schreiben
+  braucht Root → `FlooshFanHelper` als LaunchDaemon im Bundle
+  (`SMAppService.daemon`, einmalige Freigabe unter Anmeldeobjekte, App muss
+  dafür in `/Applications` liegen); der Helper kennt keine Kurve und bleibt die
+  minimale Root-Komponente. Sicherheitsnetz: ohne Ping der App stellt er nach
+  3 Minuten selbstständig auf Automatik zurück; auch beim Beenden der App wird
+  die Regelung zurückgegeben.
 - Menüleisten-Label: nur Symbol / eine Zeile / zwei Zeilen, Symbol-Stil Outline /
   Gefüllt / Farbig (Gruppenfarbe); optional CPU & GPU zweizeilig als Prozentzahl
   oder Mini-Balken. Alles als `NSImage` gerendert — MenuBarExtra
   stellt mehrzeilige SwiftUI-Labels nicht dar und erzwingt sonst Template-Rendering.
-- Gruppe wählen: Klick auf eine Karte im Dropdown.
+- Gruppe wählen: Klick auf eine Karte im Dropdown; die aktive Karte wird per
+  Rahmen, dezenter Tönung oder kräftig markiert (einstellbar).
 - Einstellungen in eigenem Fenster (⌘, / Zahnrad) mit Tabs **Anzeige · Messung ·
   Lüfter · Allgemein**: Stil, Symbol, Einheit MB/s / Mbit/s, CPU/GPU-Anzeige,
-  Intervall 0,5–2 s, Diagramm-Fenster 30–120 s, Quellen-Toggles,
-  Lüfter-Favoriten & Helper-Status, Login-Start (`SMAppService`).
+  Kachelgröße Klein/Mittel/Groß, Markierung der aktiven Kachel, Intervall
+  0,5–2 s, Diagramm-Fenster 30–120 s, Quellen-Toggles, Lüfterkurven-Editor
+  (Sensor, bis zu 8 Stützpunkte, Live-Marker), Lüfter-Favoriten & Helper-Status,
+  Login-Start (`SMAppService`).
 
 ## Screenshots
 
 <p>
-  <img src="docs/shot-dropdown.png" alt="Liquid-Glass-Dropdown mit System-Karte (CPU/GPU/Temperatur, Lüfter) und Live-Diagrammen" width="360" align="top">
+  <img src="docs/shot-dropdown.png" alt="Liquid-Glass-Dropdown mit System-Karte (CPU/GPU/Temperatur, Lüfterkurve) und Live-Diagrammen" width="360" align="top">
   &nbsp;&nbsp;
   <img src="docs/shot-settings.png" alt="Einstellungen — Anzeige" width="380" align="top">
+</p>
+<p>
+  <img src="docs/shot-fans.png" alt="Einstellungen — Lüfterkurve mit Stützpunkten und Live-Marker" width="380" align="top">
 </p>
 
 ## Bauen

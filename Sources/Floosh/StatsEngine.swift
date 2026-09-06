@@ -74,6 +74,12 @@ final class StatsEngine {
     var menuSystemStyle: MenuSystemStyle {
         didSet { defaults.set(menuSystemStyle.rawValue, forKey: "ds.menuSystem") }
     }
+    var cardSize: CardSize {
+        didSet { defaults.set(cardSize.rawValue, forKey: "ds.cardSize") }
+    }
+    var selectionStyle: SelectionStyle {
+        didSet { defaults.set(selectionStyle.rawValue, forKey: "ds.selection") }
+    }
 
     // MARK: Intern
 
@@ -97,6 +103,8 @@ final class StatsEngine {
         includeVirtualDisks = defaults.object(forKey: "ds.virtualDisks") as? Bool ?? false
         includeVirtualNets = defaults.object(forKey: "ds.virtualNets") as? Bool ?? false
         menuSystemStyle = MenuSystemStyle(rawValue: defaults.string(forKey: "ds.menuSystem") ?? "") ?? .off
+        cardSize = CardSize(rawValue: defaults.string(forKey: "ds.cardSize") ?? "") ?? .medium
+        selectionStyle = SelectionStyle(rawValue: defaults.string(forKey: "ds.selection") ?? "") ?? .border
         start()
     }
 
@@ -119,6 +127,7 @@ final class StatsEngine {
         let disks = DiskSampler.sample()
         let nets = NetSampler.sample()
         system = systemSampler.sample()
+        FanService.shared.curveTick(cpuTemp: system.cpuTemp, gpuTemp: system.gpuTemp)
 
         defer { lastTickUptime = now }
 

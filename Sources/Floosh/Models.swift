@@ -104,6 +104,122 @@ enum MenuSystemStyle: String, CaseIterable, Identifiable {
     }
 }
 
+/// Größe der Karten im Dropdown — skaliert Breite, Abstände, Symbole,
+/// Schriften und Diagrammhöhe gemeinsam.
+enum CardSize: String, CaseIterable, Identifiable {
+    case small, medium, large
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .small: "Klein"
+        case .medium: "Mittel"
+        case .large: "Groß"
+        }
+    }
+
+    var dropdownWidth: CGFloat {
+        switch self {
+        case .small: 300
+        case .medium: 340
+        case .large: 400
+        }
+    }
+    /// Abstand zwischen den Karten und Rand des Dropdowns.
+    var outerSpacing: CGFloat {
+        switch self {
+        case .small: 9
+        case .medium: 12
+        case .large: 14
+        }
+    }
+    var outerPadding: CGFloat {
+        switch self {
+        case .small: 11
+        case .medium: 14
+        case .large: 16
+        }
+    }
+    var padding: CGFloat {
+        switch self {
+        case .small: 9
+        case .medium: 12
+        case .large: 15
+        }
+    }
+    /// Abstand zwischen Kopfzeile, Diagramm und Details innerhalb der Karte.
+    var spacing: CGFloat {
+        switch self {
+        case .small: 7
+        case .medium: 10
+        case .large: 12
+        }
+    }
+    var cornerRadius: CGFloat {
+        switch self {
+        case .small: 16
+        case .medium: 20
+        case .large: 24
+        }
+    }
+    /// Durchmesser des Symbol-Kreises in der Kopfzeile.
+    var iconSize: CGFloat {
+        switch self {
+        case .small: 28
+        case .medium: 34
+        case .large: 42
+        }
+    }
+    var iconFont: CGFloat {
+        switch self {
+        case .small: 13
+        case .medium: 16
+        case .large: 19
+        }
+    }
+    var titleFont: Font {
+        switch self {
+        case .small: .system(.callout, design: .rounded, weight: .semibold)
+        case .medium: .system(.body, design: .rounded, weight: .semibold)
+        case .large: .system(.title3, design: .rounded, weight: .semibold)
+        }
+    }
+    /// Große Live-Werte (Rate bzw. Temperatur).
+    var valueFont: CGFloat {
+        switch self {
+        case .small: 13
+        case .medium: 15
+        case .large: 18
+        }
+    }
+    var glyphFont: CGFloat {
+        switch self {
+        case .small: 10
+        case .medium: 11
+        case .large: 13
+        }
+    }
+    var chartHeight: CGFloat {
+        switch self {
+        case .small: 32
+        case .medium: 46
+        case .large: 64
+        }
+    }
+}
+
+/// Wie die in der Menüleiste gezeigte (aktive) Karte hervorgehoben wird.
+enum SelectionStyle: String, CaseIterable, Identifiable {
+    case border, subtle, strong
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .border: "Rahmen"
+        case .subtle: "Dezent"
+        case .strong: "Kräftig"
+        }
+    }
+}
+
 /// Stil des Symbols in der Menüleiste.
 enum MenuIconStyle: String, CaseIterable, Identifiable {
     case outline, filled, color
