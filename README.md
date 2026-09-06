@@ -141,3 +141,10 @@ Material-Optik (`GlassCompat.swift`). Kein Sandbox-Entitlement nötig.
 - `BrandLogos.swift` wurde aus den SVGs konvertiert (SVG-Pfaddaten →
   SwiftUI-`Path`); bei Logo-Änderungen die SVGs austauschen und neu
   konvertieren, nicht die Pfade von Hand editieren.
+
+## Lizenz
+
+[MIT](LICENSE) — © 2026 JRN.digital. Ausgenommen sind die Marken: das
+floosh-Logo/Doppel-Blitz, die floosh-Wortmarke und die JRN.digital-Wortmarke
+(`Logo & Icon Source/`, `jrn Logo Source/`, `BrandLogos.swift`, `AppIcon.icns`)
+dürfen nicht für eigene Produkte oder Forks als Kennzeichen verwendet werden.
