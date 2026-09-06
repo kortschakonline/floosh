@@ -34,17 +34,29 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   3 Minuten selbstständig auf Automatik zurück; auch beim Beenden der App wird
   die Regelung zurückgegeben.
 - Menüleisten-Label: nur Symbol / eine Zeile / zwei Zeilen, Symbol-Stil Outline /
-  Gefüllt / Farbig (Gruppenfarbe); optional CPU & GPU zweizeilig als Prozentzahl
-  oder Mini-Balken. Alles als `NSImage` gerendert — MenuBarExtra
-  stellt mehrzeilige SwiftUI-Labels nicht dar und erzwingt sonst Template-Rendering.
+  Gefüllt / Farbig (Gruppenfarbe), Werte beide / nur Lesen / nur Schreiben.
+  Zusätze: CPU & GPU zweizeilig als Prozentzahl oder Mini-Balken, Temperatur
+  und/oder Lüfterdrehzahl, Sparkline der letzten 30 s, „Werte nur bei
+  Aktivität" (unter 100 KB/s nur das Symbol), Zahlen in Gruppenfarbe. Alles
+  als `NSImage` gerendert — MenuBarExtra stellt mehrzeilige SwiftUI-Labels
+  nicht dar und erzwingt sonst Template-Rendering.
 - Gruppe wählen: Klick auf eine Karte im Dropdown; die aktive Karte wird per
-  Rahmen, dezenter Tönung oder kräftig markiert (einstellbar).
+  Rahmen, dezenter Tönung oder kräftig markiert (einstellbar). Anordnung als
+  Liste oder 2×2-Raster.
 - Einstellungen in eigenem Fenster (⌘, / Zahnrad) mit Tabs **Anzeige · Messung ·
-  Lüfter · Allgemein**: Stil, Symbol, Einheit MB/s / Mbit/s, CPU/GPU-Anzeige,
-  Kachelgröße Klein/Mittel/Groß, Markierung der aktiven Kachel, Intervall
-  0,5–2 s, Diagramm-Fenster 30–120 s, Quellen-Toggles, Lüfterkurven-Editor
-  (Sensor, bis zu 8 Stützpunkte, Live-Marker), Lüfter-Favoriten & Helper-Status,
-  Login-Start (`SMAppService`).
+  Lüfter · Allgemein**: Stil, Symbol, Einheit MB/s / Mbit/s, Menüleisten-Zusätze,
+  Anordnung, Kachelgröße Klein/Mittel/Groß, Markierung der aktiven Kachel,
+  Intervall 0,5–2 s, Diagramm-Fenster 30–120 s, Quellen-Toggles,
+  Lüfterkurven-Editor (Sensor, bis zu 8 Stützpunkte, Live-Marker),
+  Lüfter-Favoriten & Helper-Status, Login-Start (`SMAppService`), Update-Check.
+- Update-Hinweis: `UpdateChecker` fragt beim Start und alle 6 Stunden die
+  GitHub-Releases-API (`releases/latest`) ab und vergleicht das Tag mit der
+  Bundle-Version; neue Versionen erscheinen als Zeile im Dropdown und unter
+  Allgemein (Laden = DMG-Asset, Überspringen merkt sich die Version). Kein
+  Auto-Install.
+- Feature-Katalog (`Features.swift`): jedes Feature hat eine Stufe (heute alle
+  frei); Einstellungs-Einstiege laufen über `featureGated`, damit eine spätere
+  Pro-Variante nur dort ansetzt.
 
 ## Screenshots
 
@@ -55,6 +67,9 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
 </p>
 <p>
   <img src="docs/shot-fans.png" alt="Einstellungen — Lüfterkurve mit Stützpunkten und Live-Marker" width="380" align="top">
+</p>
+<p>
+  <img src="docs/shot-grid.png" alt="Dropdown im Raster-Layout (2×2)" width="620">
 </p>
 
 ## Bauen
@@ -71,6 +86,18 @@ Installieren: nach `/Applications` kopieren — oder gleich den Installer bauen:
 ```
 
 Ergebnis: `build/floosh-<version>.dmg` (App + Applications-Verknüpfung).
+Die Versionsnummer kommt aus `VERSION`, die Build-Nummer ist die Commit-Anzahl.
+
+## Release
+
+```bash
+./Tools/release.sh
+```
+
+Baut das DMG, setzt den Tag `v<version>`, pusht und legt das GitHub-Release
+mit dem DMG als Asset an (Notizen aus `docs/releases/<version>.md`, sonst
+generiert; `--notes "…"` bzw. `--dry-run` möglich). Der Update-Check der App
+erkennt genau diese Releases.
 
 Mindestsystem: macOS 14 (Sonoma), Universal Binary (Apple Silicon + Intel).
 Liquid Glass gibt es ab macOS 26 — davor rendert dieselbe App eine

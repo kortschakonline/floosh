@@ -18,6 +18,8 @@ struct SystemCard: View {
                 fanSection
             }
         }
+        // Im Raster füllt die Karte die Zeilenhöhe (Glas bis zum Rand)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(size.padding)
         .cardGlass(cornerRadius: size.cornerRadius)
         .onAppear { fans.refreshHelperState() }

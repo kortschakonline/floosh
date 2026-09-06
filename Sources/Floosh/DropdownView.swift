@@ -1,28 +1,58 @@
 import SwiftUI
 
-/// Inhalt des Menüleisten-Fensters: drei Gruppen-Karten in Liquid Glass.
+/// Inhalt des Menüleisten-Fensters: System-Karte und drei Gruppen-Karten in
+/// Liquid Glass — als Liste oder als 2×2-Raster.
 struct DropdownView: View {
     @Bindable var engine: StatsEngine
     var fans: FanService = .shared
+    var updates: UpdateChecker = .shared
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         let size = engine.cardSize
+        let grid = engine.layout == .grid
         CompatGlassContainer(spacing: size.outerSpacing) {
             VStack(spacing: size.outerSpacing) {
                 header
 
-                SystemCard(engine: engine, fans: fans)
+                if let release = updates.available {
+                    updateBanner(release)
+                }
 
-                ForEach(SpeedGroup.allCases) { group in
-                    GroupCard(engine: engine, group: group)
+                if grid {
+                    gridRow {
+                        SystemCard(engine: engine, fans: fans)
+                    } trailing: {
+                        GroupCard(engine: engine, group: .internalDrives)
+                    }
+                    gridRow {
+                        GroupCard(engine: engine, group: .externalDrives)
+                    } trailing: {
+                        GroupCard(engine: engine, group: .network)
+                    }
+                } else {
+                    SystemCard(engine: engine, fans: fans)
+                    ForEach(SpeedGroup.allCases) { group in
+                        GroupCard(engine: engine, group: group)
+                    }
                 }
 
                 footer
             }
             .padding(size.outerPadding)
         }
-        .frame(width: size.dropdownWidth)
+        .frame(width: engine.dropdownWidth)
+    }
+
+    /// Zwei Karten nebeneinander mit gleicher Höhe: `fixedSize` gibt der
+    /// Zeile ihre Idealhöhe (die höhere Karte), die Karten füllen sie auf.
+    private func gridRow<A: View, B: View>(@ViewBuilder leading: () -> A,
+                                           @ViewBuilder trailing: () -> B) -> some View {
+        HStack(alignment: .top, spacing: engine.cardSize.outerSpacing) {
+            leading()
+            trailing()
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var header: some View {
@@ -51,6 +81,25 @@ struct DropdownView: View {
             .help("floosh beenden")
         }
         .padding(.horizontal, 2)
+    }
+
+    /// Schmale Zeile, sobald auf GitHub eine neuere Version liegt.
+    private func updateBanner(_ release: UpdateChecker.Release) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "arrow.down.circle.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+            Text("floosh \(release.version) ist verfügbar")
+                .font(.caption.weight(.semibold))
+            Spacer(minLength: 8)
+            Button("Laden") { updates.openDownload(release) }
+                .compatGlassButton()
+                .controlSize(.small)
+                .help("DMG von GitHub laden")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .cardGlass(tint: Color.accentColor.opacity(0.12), cornerRadius: 14)
     }
 
     /// Dezente Credit-Zeile: die JRN.digital-Wortmarke, klickbar zur Website.

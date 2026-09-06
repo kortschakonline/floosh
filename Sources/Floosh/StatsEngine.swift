@@ -80,6 +80,28 @@ final class StatsEngine {
     var selectionStyle: SelectionStyle {
         didSet { defaults.set(selectionStyle.rawValue, forKey: "ds.selection") }
     }
+    var layout: DropdownLayout {
+        didSet { defaults.set(layout.rawValue, forKey: "ds.layout") }
+    }
+    /// Breite des Dropdown-Fensters je nach Anordnung und Kachelgröße.
+    var dropdownWidth: CGFloat {
+        layout == .grid ? cardSize.gridWidth : cardSize.dropdownWidth
+    }
+    var menuChannel: MenuChannel {
+        didSet { defaults.set(menuChannel.rawValue, forKey: "ds.menuChannel") }
+    }
+    var menuThermal: MenuThermalStyle {
+        didSet { defaults.set(menuThermal.rawValue, forKey: "ds.menuThermal") }
+    }
+    var menuSparkline: Bool {
+        didSet { defaults.set(menuSparkline, forKey: "ds.menuSparkline") }
+    }
+    var menuHideIdle: Bool {
+        didSet { defaults.set(menuHideIdle, forKey: "ds.menuHideIdle") }
+    }
+    var menuTintText: Bool {
+        didSet { defaults.set(menuTintText, forKey: "ds.menuTintText") }
+    }
 
     // MARK: Intern
 
@@ -105,6 +127,12 @@ final class StatsEngine {
         menuSystemStyle = MenuSystemStyle(rawValue: defaults.string(forKey: "ds.menuSystem") ?? "") ?? .off
         cardSize = CardSize(rawValue: defaults.string(forKey: "ds.cardSize") ?? "") ?? .medium
         selectionStyle = SelectionStyle(rawValue: defaults.string(forKey: "ds.selection") ?? "") ?? .border
+        layout = DropdownLayout(rawValue: defaults.string(forKey: "ds.layout") ?? "") ?? .list
+        menuChannel = MenuChannel(rawValue: defaults.string(forKey: "ds.menuChannel") ?? "") ?? .both
+        menuThermal = MenuThermalStyle(rawValue: defaults.string(forKey: "ds.menuThermal") ?? "") ?? .off
+        menuSparkline = defaults.object(forKey: "ds.menuSparkline") as? Bool ?? false
+        menuHideIdle = defaults.object(forKey: "ds.menuHideIdle") as? Bool ?? false
+        menuTintText = defaults.object(forKey: "ds.menuTintText") as? Bool ?? false
         start()
     }
 

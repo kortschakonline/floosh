@@ -51,6 +51,8 @@ struct GroupCard: View {
                     deviceList(state.devices)
                 }
             }
+            // Im Raster füllt die Karte die Zeilenhöhe (Glas bis zum Rand)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(size.padding)
             .contentShape(.rect(cornerRadius: size.cornerRadius))
             // Rahmen gehört zum Karteninhalt, damit er sicher über dem Glas liegt

@@ -41,7 +41,7 @@ enum RealWindowShots {
 
     private static func presentDropdown(engine: StatsEngine) async {
         // Panel: das Dropdown mit der dunklen Glas-Rückwand des Menü-Fensters
-        let panel = makeWindow(size: NSSize(width: engine.cardSize.dropdownWidth, height: 1))
+        let panel = makeWindow(size: NSSize(width: engine.dropdownWidth, height: 1))
         panel.contentView = NSHostingView(rootView:
             DropdownView(engine: engine)
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 26))

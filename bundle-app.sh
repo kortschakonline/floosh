@@ -4,7 +4,11 @@
 set -e
 cd "$(dirname "$0")"
 
-echo "→ Release-Build (Universal: arm64 + x86_64) …"
+# Version aus VERSION; Build-Nummer = Anzahl Commits (monoton steigend)
+VERSION=$(tr -d '[:space:]' < VERSION)
+BUILD=$(git rev-list --count HEAD 2>/dev/null || echo 1)
+
+echo "→ Release-Build floosh $VERSION ($BUILD) (Universal: arm64 + x86_64) …"
 BIN=".build/apple/Products/Release/Floosh"
 HELPER_BIN=".build/apple/Products/Release/FlooshFanHelper"
 if ! swift build -c release --arch arm64 --arch x86_64; then
@@ -48,7 +52,7 @@ if [[ -f "AppIcon.icns" ]]; then
   cp AppIcon.icns "$APP/Contents/Resources/"
 fi
 
-cat > "$APP/Contents/Info.plist" <<'PLIST'
+cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -66,9 +70,9 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.2.0</string>
+	<string>${VERSION}</string>
 	<key>CFBundleVersion</key>
-	<string>4</string>
+	<string>${BUILD}</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>

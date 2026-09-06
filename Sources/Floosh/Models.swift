@@ -91,6 +91,41 @@ enum MenuLabelStyle: String, CaseIterable, Identifiable {
     }
 }
 
+/// Welche Richtung die Menüleiste zeigt. Bei „nur Lesen/Schreiben" wird
+/// auch der zweizeilige Stil einzeilig.
+enum MenuChannel: String, CaseIterable, Identifiable {
+    case both, read, write
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .both: "Beide"
+        case .read: "Lesen · ↓"
+        case .write: "Schreiben · ↑"
+        }
+    }
+}
+
+/// Temperatur-/Lüfter-Block in der Menüleiste (zweizeilig).
+enum MenuThermalStyle: String, CaseIterable, Identifiable {
+    case off, temp, fan, both
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .off: "Aus"
+        case .temp: "Temperatur"
+        case .fan: "Lüfter"
+        case .both: "Beides"
+        }
+    }
+}
+
+/// Anordnung der Karten im Dropdown.
+enum DropdownLayout: String, CaseIterable, Identifiable {
+    case list, grid
+    var id: String { rawValue }
+    var title: String { self == .list ? "Liste" : "Raster" }
+}
+
 /// Darstellung von CPU- & GPU-Auslastung in der Menüleiste (zweizeilig).
 enum MenuSystemStyle: String, CaseIterable, Identifiable {
     case off, number, bar
@@ -123,6 +158,10 @@ enum CardSize: String, CaseIterable, Identifiable {
         case .medium: 340
         case .large: 400
         }
+    }
+    /// Breite im Raster-Layout: zwei Karten in Listenbreite nebeneinander.
+    var gridWidth: CGFloat {
+        2 * dropdownWidth - 2 * outerPadding + outerSpacing
     }
     /// Abstand zwischen den Karten und Rand des Dropdowns.
     var outerSpacing: CGFloat {

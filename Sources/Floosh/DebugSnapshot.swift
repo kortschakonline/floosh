@@ -48,7 +48,7 @@ enum DebugSnapshot {
         for scheme in [ColorScheme.dark, ColorScheme.light] {
             let name = scheme == .dark ? "dropdown-dark" : "dropdown-light"
             let view = DropdownView(engine: engine)
-                .frame(width: engine.cardSize.dropdownWidth)
+                .frame(width: engine.dropdownWidth)
                 .background(scheme == .dark ? Color(white: 0.12) : Color(white: 0.92))
                 .environment(\.colorScheme, scheme)
             let renderer = ImageRenderer(content: view)
@@ -58,20 +58,28 @@ enum DebugSnapshot {
             }
         }
 
+        var spec = MenuLabelSpec(group: engine.selectedGroup,
+                                 labelStyle: engine.labelStyle,
+                                 iconStyle: engine.iconStyle,
+                                 singleLine: "3,1 MB/s",
+                                 readLine: "L 16,0K",
+                                 writeLine: "S 2,9M",
+                                 cpuUsage: engine.system.cpuUsage,
+                                 gpuUsage: engine.system.gpuUsage)
         for style in [MenuSystemStyle.number, .bar] {
-            let img = LabelImageRenderer.render(
-                group: engine.selectedGroup,
-                labelStyle: engine.labelStyle,
-                iconStyle: engine.iconStyle,
-                singleLine: "3,1 MB/s",
-                readLine: "L 16,0K",
-                writeLine: "S 2,9M",
-                systemStyle: style,
-                cpuUsage: engine.system.cpuUsage,
-                gpuUsage: engine.system.gpuUsage
-            )
-            save(img, to: url.appendingPathComponent("label-\(style.rawValue).png"))
+            spec.systemStyle = style
+            save(LabelImageRenderer.render(spec), to: url.appendingPathComponent("label-\(style.rawValue).png"))
         }
+
+        // Zusätze: Sparkline + Temperatur/Lüfter, dazu das echte Live-Label
+        spec.systemStyle = .off
+        spec.thermalRows = [("T", "68°"), ("F", "2300")]
+        spec.sparkline = (0..<30).map { i in
+            let wave = pow(sin(Double(i) / 3.5), 2)
+            return 0.08 + 0.9 * wave * (i % 5 == 0 ? 1 : 0.45)
+        }
+        save(LabelImageRenderer.render(spec), to: url.appendingPathComponent("label-extras.png"))
+        save(LabelImageRenderer.render(engine.menuLabelSpec()), to: url.appendingPathComponent("label-live.png"))
     }
 
     private static func save(_ image: NSImage, to url: URL) {

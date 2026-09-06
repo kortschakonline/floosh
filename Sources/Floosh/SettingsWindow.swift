@@ -76,21 +76,56 @@ struct SettingsWindow: View {
             }
             .pickerStyle(.segmented)
 
-            Picker("CPU & GPU in der Menüleiste", selection: $engine.menuSystemStyle) {
-                ForEach(MenuSystemStyle.allCases) { Text($0.title).tag($0) }
+            Picker("Werte", selection: $engine.menuChannel) {
+                ForEach(MenuChannel.allCases) { Text($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
+            .featureGated(.menuChannel)
+
+            Section("Zusätze in der Menüleiste") {
+                Picker("CPU & GPU", selection: $engine.menuSystemStyle) {
+                    ForEach(MenuSystemStyle.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+
+                Picker("Temperatur & Lüfter", selection: $engine.menuThermal) {
+                    ForEach(MenuThermalStyle.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .featureGated(.menuThermal)
+
+                Toggle("Verlauf der letzten 30 s (Sparkline)", isOn: $engine.menuSparkline)
+                    .featureGated(.menuSparkline)
+                Toggle("Werte nur bei Aktivität (ab 100 KB/s)", isOn: $engine.menuHideIdle)
+                    .featureGated(.menuHideIdle)
+                Toggle("Zahlen in Gruppenfarbe", isOn: $engine.menuTintText)
+                    .disabled(engine.iconStyle != .color)
+                    .featureGated(.menuTintText)
+                if engine.iconStyle != .color {
+                    Text("Farbige Zahlen gibt es nur beim Symbol „Farbig“ — Outline und Gefüllt sind einfarbige Systemsymbole.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             Section("Dropdown") {
+                Picker("Anordnung", selection: $engine.layout) {
+                    ForEach(DropdownLayout.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .featureGated(.gridLayout)
+
                 Picker("Kachelgröße", selection: $engine.cardSize) {
                     ForEach(CardSize.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
+                .featureGated(.cardSize)
 
                 Picker("Aktive Kachel", selection: $engine.selectionStyle) {
                     ForEach(SelectionStyle.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
+                .featureGated(.selectionStyle)
 
                 Toggle("Spitzenwerte anzeigen", isOn: $engine.showPeaks)
                 Toggle("Einzelne Geräte anzeigen", isOn: $engine.showDevices)
@@ -128,7 +163,7 @@ struct SettingsWindow: View {
     // MARK: Allgemein
 
     private var generalTab: some View {
-        GeneralSettingsTab()
+        GeneralSettingsTab(updates: UpdateChecker.shared)
     }
 }
 
@@ -253,6 +288,7 @@ private struct FanSettingsTab: View {
 }
 
 private struct GeneralSettingsTab: View {
+    @Bindable var updates: UpdateChecker
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
 
@@ -262,7 +298,7 @@ private struct GeneralSettingsTab: View {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 5) {
                         FlooshWordmark(height: 30)
-                        Text("Version 1.2.0")
+                        Text("Version \(UpdateChecker.currentVersion ?? "dev")")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -286,6 +322,37 @@ private struct GeneralSettingsTab: View {
                     .foregroundStyle(.orange)
             }
 
+            Section("Updates") {
+                Toggle("Automatisch nach Updates suchen", isOn: $updates.automatic)
+                    .featureGated(.updateCheck)
+
+                LabeledContent("Status") {
+                    updateStatus
+                }
+
+                if let release = updates.available {
+                    HStack(spacing: 8) {
+                        Button("Laden") { updates.openDownload(release) }
+                            .buttonStyle(.borderedProminent)
+                        Button("Release-Seite") { updates.openPage(release) }
+                        Spacer()
+                        Button("Überspringen") { updates.skip(release) }
+                    }
+                    .controlSize(.small)
+                }
+
+                HStack {
+                    Button(updates.isChecking ? "Prüfe …" : "Jetzt prüfen") {
+                        Task { await updates.check() }
+                    }
+                    .disabled(updates.isChecking)
+                    .controlSize(.small)
+                    Spacer()
+                    Link("GitHub-Releases", destination: URL(string: "https://github.com/\(UpdateChecker.repository)/releases")!)
+                        .font(.caption)
+                }
+            }
+
             Section {
                 LabeledContent("Entwickelt von") {
                     Link("jrn.digital", destination: URL(string: "https://jrn.digital")!)
@@ -293,6 +360,28 @@ private struct GeneralSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    @ViewBuilder
+    private var updateStatus: some View {
+        if updates.isChecking {
+            Text("Prüfe …").foregroundStyle(.secondary)
+        } else if let error = updates.lastError {
+            Text(error).foregroundStyle(.orange)
+        } else if let release = updates.available {
+            Label("Version \(release.version) verfügbar", systemImage: "arrow.down.circle.fill")
+                .foregroundStyle(Color.accentColor)
+        } else if let latest = updates.latest, let checked = updates.lastChecked {
+            let skipped = latest.version == updates.skippedVersion
+            Text(skipped
+                 ? "Version \(latest.version) übersprungen"
+                 : "floosh ist aktuell (geprüft \(checked.formatted(date: .omitted, time: .shortened)))")
+                .foregroundStyle(.secondary)
+        } else if UpdateChecker.currentVersion == nil {
+            Text("Entwicklungs-Build — keine Prüfung").foregroundStyle(.secondary)
+        } else {
+            Text("Noch nicht geprüft").foregroundStyle(.secondary)
+        }
     }
 
     private func updateLoginItem(enabled: Bool) {

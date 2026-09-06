@@ -8,6 +8,9 @@ struct FlooshApp: App {
 
     init() {
         DebugSnapshot.runIfRequested(engine: engine)
+        if !DebugSnapshot.isActive {
+            UpdateChecker.shared.startLoop()
+        }
     }
 
     var body: some Scene {
