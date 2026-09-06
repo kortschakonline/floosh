@@ -10,16 +10,26 @@ struct SettingsWindow: View {
     @Bindable var engine: StatsEngine
     @Bindable private var shelf = FileShelf.shared
     @State private var selectedTab: SettingsTab
+    /// In einem eigenen, größenveränderbaren Fenster darf der Inhalt scrollen —
+    /// der Anzeige-Tab ist höher als der Bildschirm.
+    private let fixedHeight: Bool
 
-    init(engine: StatsEngine, initialTab: SettingsTab = .display) {
+    init(engine: StatsEngine, initialTab: SettingsTab = .display, fixedHeight: Bool = true) {
         self.engine = engine
+        self.fixedHeight = fixedHeight
         _selectedTab = State(initialValue: initialTab)
     }
 
+    @ViewBuilder
     var body: some View {
-        tabs
-            .frame(width: 440)
-            .fixedSize(horizontal: false, vertical: true)
+        if fixedHeight {
+            tabs
+                .frame(width: 440)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            tabs
+                .frame(minWidth: 440, minHeight: 320)
+        }
     }
 
     /// Die `Tab`-Syntax gibt es erst ab macOS 15 — davor `tabItem`.

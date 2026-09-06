@@ -25,6 +25,22 @@ enum DebugSnapshot {
                 NSApp.terminate(nil)
             }
         }
+        if CommandLine.arguments.contains("--open-settings") {
+            // Dev-Hook: öffnet die Einstellungen wie das Zahnrad im Dropdown
+            // und meldet die Fenster-ID für ein externes `screencapture`.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                SettingsLauncher.open()
+                try? await Task.sleep(for: .seconds(2))
+                for window in NSApp.windows where window.isVisible && window.title == "floosh" {
+                    print("SETTINGS \(window.windowNumber) \(Int(window.frame.width))x\(Int(window.frame.height))")
+                }
+                fflush(stdout)
+                try? await Task.sleep(for: .seconds(12))
+                NSApp.terminate(nil)
+            }
+            return
+        }
         if shootRequested {
             Task { @MainActor in
                 await RealWindowShots.run(engine: engine)

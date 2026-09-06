@@ -8,7 +8,6 @@ struct DropdownView: View {
     var updates: UpdateChecker = .shared
     var panel: PanelSettings = .shared
     var shelf: FileShelf = .shared
-    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         let size = engine.cardSize
@@ -16,6 +15,13 @@ struct DropdownView: View {
             content(size: size)
         }
         .frame(width: engine.dropdownWidth)
+        // Das ganze Fenster nimmt Dateien an, nicht nur die Ablage-Karte —
+        // beim Ziehen soll man nicht zielen müssen.
+        .dropDestination(for: URL.self) { urls, _ in
+            MenuBarController.shared?.accept(urls) ?? (shelf.add(urls) > 0)
+        } isTargeted: { targeted in
+            if targeted { MenuBarController.shared?.dragEnteredPanel() }
+        }
     }
 
     /// Kein ScrollView: Das Fenster von `MenuBarExtra` fragt nur die Idealgröße
@@ -76,8 +82,7 @@ struct DropdownView: View {
             .help(panel.enabled ? "Desktop-Panel ausblenden" : "Desktop-Panel anzeigen")
 
             Button {
-                openSettings()
-                NSApp.activate(ignoringOtherApps: true)
+                SettingsLauncher.open()
             } label: {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 12, weight: .semibold))

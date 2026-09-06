@@ -50,6 +50,7 @@ struct ShelfCard: View {
         .dropDestination(for: URL.self) { urls, _ in
             shelf.add(urls) > 0
         } isTargeted: { targeted in
+            if targeted { MenuBarController.shared?.dragEnteredPanel() }
             withAnimation(.snappy(duration: 0.15)) { isTargeted = targeted }
         }
         .onAppear { shelf.refresh() }

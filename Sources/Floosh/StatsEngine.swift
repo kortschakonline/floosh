@@ -7,6 +7,9 @@ import Observation
 @Observable
 final class StatsEngine {
 
+    /// Eine Instanz für die ganze App — der AppDelegate braucht sie auch.
+    static let shared = StatsEngine()
+
     struct GroupState {
         var read: Double = 0      // Bytes/s
         var write: Double = 0     // Bytes/s

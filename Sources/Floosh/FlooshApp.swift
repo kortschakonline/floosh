@@ -4,7 +4,7 @@ import AppKit
 @main
 struct FlooshApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var engine = StatsEngine()
+    private let engine = StatsEngine.shared
 
     init() {
         DebugSnapshot.runIfRequested(engine: engine)
@@ -18,14 +18,9 @@ struct FlooshApp: App {
         }
     }
 
+    /// Nur noch das Einstellungsfenster als Szene — die Menüleiste läuft über
+    /// `MenuBarController` (eigener `NSStatusItem`, siehe MenuBarWindow.swift).
     var body: some Scene {
-        MenuBarExtra {
-            DropdownView(engine: engine)
-        } label: {
-            MenuBarLabel(engine: engine)
-        }
-        .menuBarExtraStyle(.window)
-
         Settings {
             SettingsWindow(engine: engine)
         }
@@ -36,6 +31,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Reine Menüleisten-App: kein Dock-Icon, auch beim Start über `swift run`
         NSApp.setActivationPolicy(.accessory)
+        MainActor.assumeIsolated {
+            guard !DebugSnapshot.isActive, !DebugSnapshot.shootRequested else { return }
+            MenuBarController.start(engine: .shared)
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

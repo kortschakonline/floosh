@@ -26,6 +26,23 @@ enum RealWindowShots {
                 let tab = args.count > idx + 2 ? SettingsTab(rawValue: args[idx + 2]) : nil
                 await presentSettings(engine: engine, tab: tab ?? .display)
                 return
+            case "menu":
+                // Das echte Menüleisten-Fenster (eigener NSStatusItem) —
+                // nur so lässt sich seine Größe überhaupt prüfen.
+                engine.chartWindow = 30
+                try? await Task.sleep(for: .seconds(4))
+                let controller = MenuBarController(engine: engine)
+                controller.open()
+                try? await Task.sleep(for: .seconds(1))
+                if let frame = controller.panelFrame {
+                    announceRegion("MENU", frame: frame)
+                } else {
+                    print("MENU-FEHLER: kein Fenster")
+                    flushStdout()
+                }
+                try? await Task.sleep(for: .seconds(10))
+                controller.close()
+                return
             case "panel":
                 engine.chartWindow = 30
                 try? await Task.sleep(for: .seconds(34))

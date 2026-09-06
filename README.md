@@ -12,7 +12,7 @@ drei Kachelgrößen. Logo: der floosh-Doppel-Blitz (SVG-Quelle in
 `Logo & Icon Source/`, als Vektorpfade eingebettet in `BrandLogos.swift`,
 zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
 
-- SwiftUI `MenuBarExtra` (Window-Style) · Liquid Glass (`glassEffect`) · Swift Charts
+- SwiftUI · eigener `NSStatusItem` (`MenuBarWindow.swift`) · Liquid Glass (`glassEffect`) · Swift Charts
 - Messung: IOKit `IOBlockStorageDriver`-Statistiken (Laufwerke, Klassifizierung über
   `Physical Interconnect Location` am Eltern-`IOBlockStorageDevice`) und
   `sysctl NET_RT_IFLIST2` (Netzwerk). Raten aus Zähler-Deltas, kein Root nötig.
@@ -60,8 +60,18 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   Deckkraft, Liste/Raster, Kartenauswahl, Ziel-Bildschirm; Fenstergröße folgt
   dem SwiftUI-Inhalt (`sizingOptions = .preferredContentSize`), danach wird
   an der Ecke neu ausgerichtet. Schalter im Dropdown-Kopf und Tab **Panel**.
+- Menüleiste (`MenuBarWindow.swift`): eigener `NSStatusItem` statt `MenuBarExtra`.
+  Nötig fürs Ziehen — das Fenster von `MenuBarExtra` schließt sich, sobald eine
+  andere App aktiv wird, und es gibt seinen Statusknopf nicht heraus. Eine
+  unsichtbare `StatusDropView` über dem Knopf nimmt Klicks und Datei-Drags an
+  und klappt das Fenster beim Darüberziehen auf (Spring-Loading); das Fenster
+  ist ein `NSPanel` (`.nonactivatingPanel`, Level `.popUpMenu`), das per Klick
+  daneben, Escape oder erneutem Klick schließt. Auch das Einstellungsfenster
+  gehört jetzt der App (`SettingsWindowController`) — `showSettingsWindow:`
+  meldet in dieser Konstellation Erfolg, öffnet aber nichts.
 - Ablage (`FileShelf.swift`, `ShelfCard.swift`): Dateien kurz parken — als Karte
-  im Dropdown und im Desktop-Panel. Hinein per Drop (`dropDestination`), über die
+  im Dropdown und im Desktop-Panel. Hinein per Ziehen auf das Menüleisten-Symbol
+  oder irgendwo ins Fenster (`dropDestination`), über die
   Dateiauswahl oder aus der Zwischenablage; heraus per `NSItemProvider(contentsOf:)`,
   also als echte Datei-Referenz in Finder und andere Apps. Vorschaubilder aus
   QuickLook (`QLThumbnailGenerator`, als PNG-Daten über die Isolationsgrenze),
@@ -151,7 +161,12 @@ Material-Optik (`GlassCompat.swift`). Kein Sandbox-Entitlement nötig.
   PNG (ohne Glas), `floosh --shoot` zeigt Dropdown/Einstellungen in echten
   Fenstern (echtes Liquid Glass) und meldet Region/Fenster-ID auf stdout für
   ein externes `screencapture` — so entstanden die README-Screenshots
-  (`--shoot settings` nur das Einstellungsfenster, ohne Warmlaufphase).
+  (`--shoot settings` nur das Einstellungsfenster, `--shoot panel` das
+  Desktop-Panel, `--shoot menu` das echte Menüleisten-Fenster,
+  `--open-settings` das Einstellungsfenster über denselben Weg wie das
+  Zahnrad). **`--shoot` bildet das Menüleisten-Fenster nicht nach** — es setzt
+  seine Größe selbst; Änderungen am Dropdown-Aufbau nur mit `--shoot menu`
+  prüfen.
 - App-Icon wird per `Tools/make-icon.sh` aus den Marken-Pfaden in
   `BrandLogos.swift` generiert (Navy-Kachel + Doppel-Blitz) und liegt als
   `AppIcon.icns` im Repo.
