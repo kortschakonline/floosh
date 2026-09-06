@@ -6,6 +6,7 @@ struct DropdownView: View {
     @Bindable var engine: StatsEngine
     var fans: FanService = .shared
     var updates: UpdateChecker = .shared
+    var panel: PanelSettings = .shared
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
@@ -59,6 +60,17 @@ struct DropdownView: View {
         HStack(spacing: 8) {
             FlooshWordmark(height: 24)
             Spacer()
+            Button {
+                panel.enabled.toggle()
+            } label: {
+                Image(systemName: panel.enabled ? "rectangle.inset.filled.on.rectangle" : "rectangle.on.rectangle")
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 16, height: 16)
+            }
+            .compatGlassButton()
+            .featureGated(.desktopPanel)
+            .help(panel.enabled ? "Desktop-Panel ausblenden" : "Desktop-Panel anzeigen")
+
             Button {
                 openSettings()
                 NSApp.activate(ignoringOtherApps: true)

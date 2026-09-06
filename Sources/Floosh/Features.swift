@@ -11,6 +11,8 @@ enum Feature: String, CaseIterable, Identifiable {
     case fanManual, fanCurve
     // Menüleiste
     case menuChannel, menuThermal, menuSparkline, menuHideIdle, menuTintText
+    // Desktop-Panel
+    case desktopPanel
     // Allgemein
     case updateCheck
 

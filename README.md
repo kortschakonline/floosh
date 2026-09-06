@@ -44,11 +44,17 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   Rahmen, dezenter Tönung oder kräftig markiert (einstellbar). Anordnung als
   Liste oder 2×2-Raster.
 - Einstellungen in eigenem Fenster (⌘, / Zahnrad) mit Tabs **Anzeige · Messung ·
-  Lüfter · Allgemein**: Stil, Symbol, Einheit MB/s / Mbit/s, Menüleisten-Zusätze,
+  Lüfter · Panel · Allgemein**: Stil, Symbol, Einheit MB/s / Mbit/s, Menüleisten-Zusätze,
   Anordnung, Kachelgröße Klein/Mittel/Groß, Markierung der aktiven Kachel,
   Intervall 0,5–2 s, Diagramm-Fenster 30–120 s, Quellen-Toggles,
   Lüfterkurven-Editor (Sensor, bis zu 8 Stützpunkte, Live-Marker),
   Lüfter-Favoriten & Helper-Status, Login-Start (`SMAppService`), Update-Check.
+- Desktop-Panel (`DesktopPanel.swift`): rahmenloses, transparentes `NSPanel`
+  mit denselben Karten — auf Desktop-Ebene (`desktopIconWindow − 1`, hinter
+  allen Fenstern, auf allen Schreibtischen) oder `.floating`. Ecke + Randabstand,
+  Deckkraft, Liste/Raster, Kartenauswahl, Ziel-Bildschirm; Fenstergröße folgt
+  dem SwiftUI-Inhalt (`sizingOptions = .preferredContentSize`), danach wird
+  an der Ecke neu ausgerichtet. Schalter im Dropdown-Kopf und Tab **Panel**.
 - Update-Hinweis: `UpdateChecker` fragt beim Start und alle 6 Stunden die
   GitHub-Releases-API (`releases/latest`) ab und vergleicht das Tag mit der
   Bundle-Version; neue Versionen erscheinen als Zeile im Dropdown und unter
@@ -70,6 +76,11 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
 </p>
 <p>
   <img src="docs/shot-grid.png" alt="Dropdown im Raster-Layout (2×2)" width="620">
+</p>
+<p>
+  <img src="docs/shot-panel.png" alt="Desktop-Panel auf dem Schreibtisch" width="360" align="top">
+  &nbsp;&nbsp;
+  <img src="docs/shot-panel-settings.png" alt="Einstellungen — Panel" width="380" align="top">
 </p>
 
 ## Bauen

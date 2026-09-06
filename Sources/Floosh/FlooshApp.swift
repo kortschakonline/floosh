@@ -11,6 +11,11 @@ struct FlooshApp: App {
         if !DebugSnapshot.isActive {
             UpdateChecker.shared.startLoop()
         }
+        if !DebugSnapshot.isActive, !DebugSnapshot.shootRequested {
+            // Fenster erst anlegen, wenn AppKit den Start abgeschlossen hat
+            let engine = engine
+            Task { @MainActor in DesktopPanelController.shared.attach(engine: engine) }
+        }
     }
 
     var body: some Scene {

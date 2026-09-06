@@ -16,14 +16,26 @@ import AppKit
 enum RealWindowShots {
 
     static func run(engine: StatsEngine) async {
-        // `--shoot settings [display|measurement|fans|general]`: nur das
-        // Einstellungsfenster (optional mit Start-Tab), ohne Warmlaufphase
+        // `--shoot settings [display|measurement|fans|panel|general]`: nur das
+        // Einstellungsfenster (optional mit Start-Tab), ohne Warmlaufphase;
+        // `--shoot panel`: nur das Desktop-Panel (auf Backdrop, nach Warmlauf)
         let args = CommandLine.arguments
-        if let idx = args.firstIndex(of: "--shoot"),
-           args.count > idx + 1, args[idx + 1] == "settings" {
-            let tab = args.count > idx + 2 ? SettingsTab(rawValue: args[idx + 2]) : nil
-            await presentSettings(engine: engine, tab: tab ?? .display)
-            return
+        if let idx = args.firstIndex(of: "--shoot"), args.count > idx + 1 {
+            switch args[idx + 1] {
+            case "settings":
+                let tab = args.count > idx + 2 ? SettingsTab(rawValue: args[idx + 2]) : nil
+                await presentSettings(engine: engine, tab: tab ?? .display)
+                return
+            case "panel":
+                engine.chartWindow = 30
+                try? await Task.sleep(for: .seconds(34))
+                await presentOnBackdrop("PANEL", width: nil) {
+                    DesktopPanelView(engine: engine)
+                }
+                return
+            default:
+                break
+            }
         }
 
         // Kompaktes Diagramm-Fenster, damit die Verlaufslinien nach der
@@ -40,12 +52,20 @@ enum RealWindowShots {
     // MARK: Dropdown
 
     private static func presentDropdown(engine: StatsEngine) async {
-        // Panel: das Dropdown mit der dunklen Glas-Rückwand des Menü-Fensters
-        let panel = makeWindow(size: NSSize(width: engine.dropdownWidth, height: 1))
-        panel.contentView = NSHostingView(rootView:
+        // Das Dropdown mit der dunklen Glas-Rückwand des Menü-Fensters
+        await presentOnBackdrop("DROPDOWN", width: engine.dropdownWidth) {
             DropdownView(engine: engine)
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 26))
-                .environment(\.colorScheme, .dark)
+        }
+    }
+
+    /// Zeigt eine View in einem rahmenlosen Fenster auf dunklem Backdrop und
+    /// meldet die Region unter `label`.
+    private static func presentOnBackdrop<Content: View>(_ label: String, width: CGFloat?,
+                                                         @ViewBuilder content: () -> Content) async {
+        let panel = makeWindow(size: NSSize(width: width ?? 1, height: 1))
+        panel.contentView = NSHostingView(rootView:
+            content().environment(\.colorScheme, .dark)
         )
         panel.setContentSize(panel.contentView!.fittingSize)
 
@@ -66,7 +86,7 @@ enum RealWindowShots {
         backdrop.orderFront(nil)
         panel.orderFront(nil)
 
-        announceRegion("DROPDOWN", frame: backdrop.frame)
+        announceRegion(label, frame: backdrop.frame)
         try? await Task.sleep(for: .seconds(10))
         panel.orderOut(nil)
         backdrop.orderOut(nil)
@@ -84,7 +104,7 @@ enum RealWindowShots {
         window.level = .statusBar
         // Wie das echte Settings-Fenster: Tab-Leiste zentriert statt Overflow
         window.toolbarStyle = .preference
-        // Etwas breiter als die 420-pt-Form, sonst rutscht die Tab-Leiste
+        // Etwas breiter als die 440-pt-Form, sonst rutscht die Tab-Leiste
         // unter die Fensterknöpfe (NSHostingView zieht das Fenster sonst
         // wieder auf die Idealbreite zusammen)
         window.contentView = NSHostingView(rootView:

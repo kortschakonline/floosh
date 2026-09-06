@@ -2,7 +2,7 @@ import SwiftUI
 import ServiceManagement
 
 enum SettingsTab: String, CaseIterable {
-    case display, measurement, fans, general
+    case display, measurement, fans, panel, general
 }
 
 /// Eigenständiges Einstellungs-Fenster (⌘,) mit Tabs — hier ist Platz für mehr.
@@ -35,6 +35,9 @@ struct SettingsWindow: View {
                 Tab("Lüfter", systemImage: "fan", value: .fans) {
                     FanSettingsTab(fans: FanService.shared)
                 }
+                Tab("Panel", systemImage: "rectangle.on.rectangle", value: .panel) {
+                    PanelSettingsTab(panel: PanelSettings.shared)
+                }
                 Tab("Allgemein", systemImage: "gearshape", value: .general) {
                     generalTab
                 }
@@ -50,6 +53,9 @@ struct SettingsWindow: View {
                 FanSettingsTab(fans: FanService.shared)
                     .tabItem { Label("Lüfter", systemImage: "fan") }
                     .tag(SettingsTab.fans)
+                PanelSettingsTab(panel: PanelSettings.shared)
+                    .tabItem { Label("Panel", systemImage: "rectangle.on.rectangle") }
+                    .tag(SettingsTab.panel)
                 generalTab
                     .tabItem { Label("Allgemein", systemImage: "gearshape") }
                     .tag(SettingsTab.general)
@@ -284,6 +290,80 @@ private struct FanSettingsTab: View {
                     .frame(width: 40, alignment: .trailing)
             }
         }
+    }
+}
+
+/// Panel-Tab: Desktop-Panel ein/aus, Ebene, Position, Deckkraft, Karten.
+private struct PanelSettingsTab: View {
+    @Bindable var panel: PanelSettings
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Desktop-Panel anzeigen", isOn: $panel.enabled)
+                    .featureGated(.desktopPanel)
+                Text("Zeigt die Karten dauerhaft auf dem Schreibtisch — Größe folgt der Kachelgröße unter Anzeige.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Darstellung") {
+                Picker("Ebene", selection: $panel.level) {
+                    ForEach(PanelSettings.Level.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Text(panel.level.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Picker("Anordnung", selection: $panel.layout) {
+                    ForEach(DropdownLayout.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+
+                LabeledContent("Deckkraft") {
+                    HStack(spacing: 8) {
+                        Slider(value: $panel.opacity, in: 0.3...1, step: 0.05)
+                            .frame(width: 160)
+                        Text("\(Int((panel.opacity * 100).rounded())) %")
+                            .monospacedDigit()
+                            .frame(width: 44, alignment: .trailing)
+                    }
+                }
+            }
+
+            Section("Position") {
+                Picker("Ecke", selection: $panel.position) {
+                    ForEach(PanelSettings.Position.allCases) { Text($0.title).tag($0) }
+                }
+
+                LabeledContent("Abstand vom Rand") {
+                    HStack(spacing: 8) {
+                        Slider(value: $panel.margin, in: 0...200, step: 4)
+                            .frame(width: 160)
+                        Text("\(Int(panel.margin)) pt")
+                            .monospacedDigit()
+                            .frame(width: 44, alignment: .trailing)
+                    }
+                }
+
+                Picker("Bildschirm", selection: $panel.screenName) {
+                    Text("Hauptbildschirm").tag("")
+                    ForEach(DesktopPanelController.screenNames, id: \.self) { name in
+                        Text(name).tag(name)
+                    }
+                }
+
+                Toggle("Auf allen Schreibtischen", isOn: $panel.allSpaces)
+            }
+
+            Section("Karten") {
+                ForEach(PanelSettings.Card.allCases) { card in
+                    Toggle(card.title, isOn: panel.binding(for: card))
+                }
+            }
+        }
+        .formStyle(.grouped)
     }
 }
 
