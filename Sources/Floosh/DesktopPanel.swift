@@ -68,8 +68,9 @@ final class PanelSettings {
         screenName = defaults.string(forKey: "panel.screen") ?? ""
     }
 
-    /// Sichtbare Karten in fester Reihenfolge.
-    var orderedCards: [Card] { Card.allCases.filter { cards.contains($0) } }
+    /// Sichtbare Karten in der Reihenfolge, die im Motor eingestellt ist —
+    /// Dropdown und Panel sortieren gleich.
+    var orderedCards: [Card] { StatsEngine.shared.ordered(cards) }
 
     func binding(for card: Card) -> Binding<Bool> {
         Binding { [self] in
@@ -121,6 +122,9 @@ struct DesktopPanelView: View {
             .padding(4)
         }
         .frame(width: (grid ? size.gridWidth - 2 * size.outerPadding : size.dropdownWidth - 2 * size.outerPadding) + 8)
+        .dashboardBackdrop(opacity: engine.backdropOpacity,
+                           cornerRadius: size.cornerRadius + 6)
+        .environment(\.cardInkOpacity, engine.cardOpacity)
     }
 
     private func card(_ card: DashboardCard, compact: Bool = false) -> some View {

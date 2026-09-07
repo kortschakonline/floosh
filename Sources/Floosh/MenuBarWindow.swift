@@ -146,7 +146,15 @@ final class MenuBarController: NSObject {
             FileShelf.shared.showInDropdown = true
         }
         openedForDrag = false
-        if !isOpen { open() }
+        // `open()` startet auch die Überwachung fürs Schließen. Kam das
+        // Fenster per Spring-Loading, ist es schon offen — dann lief bisher
+        // keine Überwachung und es ließ sich nur noch über die Menüleiste
+        // schließen. Deshalb hier immer nachziehen.
+        if isOpen {
+            startMonitors()
+        } else {
+            open()
+        }
         return added > 0
     }
 

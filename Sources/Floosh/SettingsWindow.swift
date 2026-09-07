@@ -148,6 +148,27 @@ struct SettingsWindow: View {
                 Toggle("Einzelne Geräte anzeigen", isOn: $engine.showDevices)
             }
 
+            Section("Hintergrund") {
+                LabeledContent("Fläche") {
+                    Slider(value: $engine.backdropOpacity, in: 0...1)
+                        .frame(width: 200)
+                }
+                LabeledContent("Kacheln") {
+                    Slider(value: $engine.cardOpacity, in: 0...1)
+                        .frame(width: 200)
+                }
+                Text("„Fläche\u{201C} legt einen durchgehenden Grund hinter alle Kacheln — auf 0 scheint zwischen ihnen der Schreibtisch durch. „Kacheln\u{201C} macht das Glas der einzelnen Kacheln dichter. Beides gilt auch fürs Desktop-Panel.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Reihenfolge der Kacheln") {
+                CardOrderEditor(engine: engine)
+                Text("Gilt für Dropdown und Desktop-Panel. Welche Kacheln überhaupt erscheinen, steht oben bzw. im Tab „Panel\u{201C}.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Ablage") {
                 Toggle("Ablage im Dropdown anzeigen", isOn: $shelf.showInDropdown)
                     .featureGated(.fileShelf)
@@ -496,6 +517,59 @@ private struct GeneralSettingsTab: View {
         } catch {
             loginError = "Login-Start nicht möglich: \(error.localizedDescription)"
             launchAtLogin = SMAppService.mainApp.status == .enabled
+        }
+    }
+}
+
+
+/// Reihenfolge der Kacheln: eine Zeile je Karte, verschoben wird mit den
+/// Pfeilen. Bewusst keine Ziehliste — eine `List` in einem `Form` bringt
+/// ihre eigene Höhe mit und sprengt den Tab.
+private struct CardOrderEditor: View {
+    @Bindable var engine: StatsEngine
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(engine.cardOrder.enumerated()), id: \.element) { index, card in
+                HStack(spacing: 8) {
+                    Image(systemName: symbol(card))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 18)
+                    Text(card.title)
+                    Spacer()
+                    Button {
+                        engine.moveCard(card, by: -1)
+                    } label: {
+                        Image(systemName: "chevron.up")
+                    }
+                    .disabled(index == 0)
+                    .help("Nach oben")
+
+                    Button {
+                        engine.moveCard(card, by: 1)
+                    } label: {
+                        Image(systemName: "chevron.down")
+                    }
+                    .disabled(index == engine.cardOrder.count - 1)
+                    .help("Nach unten")
+                }
+                .buttonStyle(.borderless)
+                .padding(.vertical, 4)
+
+                if index < engine.cardOrder.count - 1 {
+                    Divider()
+                }
+            }
+        }
+    }
+
+    private func symbol(_ card: DashboardCard) -> String {
+        switch card {
+        case .system: "cpu"
+        case .internalDrives: SpeedGroup.internalDrives.symbol
+        case .externalDrives: SpeedGroup.externalDrives.symbol
+        case .network: SpeedGroup.network.symbol
+        case .shelf: "tray"
         }
     }
 }

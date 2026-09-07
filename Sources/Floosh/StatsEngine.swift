@@ -86,6 +86,20 @@ final class StatsEngine {
     var layout: DropdownLayout {
         didSet { defaults.set(layout.rawValue, forKey: "ds.layout") }
     }
+    /// Reihenfolge der Karten in Dropdown und Panel — frei sortierbar.
+    var cardOrder: [DashboardCard] {
+        didSet { defaults.set(cardOrder.map(\.rawValue), forKey: "ds.cardOrder") }
+    }
+    /// Deckkraft der Trägerfläche hinter den Karten (0 = nur die Karten,
+    /// wie bis 1.6; 1 = geschlossene Fläche).
+    var backdropOpacity: Double {
+        didSet { defaults.set(backdropOpacity, forKey: "ds.backdrop") }
+    }
+    /// Zusätzliche Füllung hinter jeder Karte — macht das Glas kräftiger,
+    /// ohne den Text blass zu machen (0 = reines Glas).
+    var cardOpacity: Double {
+        didSet { defaults.set(cardOpacity, forKey: "ds.cardOpacity") }
+    }
     /// Breite des Dropdown-Fensters je nach Anordnung und Kachelgröße.
     var dropdownWidth: CGFloat {
         layout == .grid ? cardSize.gridWidth : cardSize.dropdownWidth
@@ -131,12 +145,36 @@ final class StatsEngine {
         cardSize = CardSize(rawValue: defaults.string(forKey: "ds.cardSize") ?? "") ?? .medium
         selectionStyle = SelectionStyle(rawValue: defaults.string(forKey: "ds.selection") ?? "") ?? .border
         layout = DropdownLayout(rawValue: defaults.string(forKey: "ds.layout") ?? "") ?? .list
+        cardOrder = Self.loadCardOrder(defaults)
+        backdropOpacity = defaults.object(forKey: "ds.backdrop") as? Double ?? 0.5
+        cardOpacity = defaults.object(forKey: "ds.cardOpacity") as? Double ?? 0.0
         menuChannel = MenuChannel(rawValue: defaults.string(forKey: "ds.menuChannel") ?? "") ?? .both
         menuThermal = MenuThermalStyle(rawValue: defaults.string(forKey: "ds.menuThermal") ?? "") ?? .off
         menuSparkline = defaults.object(forKey: "ds.menuSparkline") as? Bool ?? false
         menuHideIdle = defaults.object(forKey: "ds.menuHideIdle") as? Bool ?? false
         menuTintText = defaults.object(forKey: "ds.menuTintText") as? Bool ?? false
         start()
+    }
+
+    /// Gespeicherte Reihenfolge, ergänzt um Karten, die es damals noch nicht
+    /// gab — so verschwindet nach einem Update keine neue Kachel.
+    private static func loadCardOrder(_ defaults: UserDefaults) -> [DashboardCard] {
+        let saved = (defaults.stringArray(forKey: "ds.cardOrder") ?? [])
+            .compactMap(DashboardCard.init(rawValue:))
+        return saved + DashboardCard.allCases.filter { !saved.contains($0) }
+    }
+
+    /// Sortiert eine Kartenauswahl nach der eingestellten Reihenfolge.
+    func ordered(_ cards: some Collection<DashboardCard>) -> [DashboardCard] {
+        cardOrder.filter(cards.contains)
+    }
+
+    /// Verschiebt eine Karte um eine Position (−1 hoch, +1 runter).
+    func moveCard(_ card: DashboardCard, by offset: Int) {
+        guard let from = cardOrder.firstIndex(of: card) else { return }
+        let to = from + offset
+        guard cardOrder.indices.contains(to) else { return }
+        cardOrder.swapAt(from, to)
     }
 
     func start() {

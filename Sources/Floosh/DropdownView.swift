@@ -15,6 +15,11 @@ struct DropdownView: View {
             content(size: size)
         }
         .frame(width: engine.dropdownWidth)
+        // Trägerfläche hinter allen Karten; ohne sie scheint zwischen ihnen
+        // der Schreibtisch durch. Etwas runder als die Karten selbst.
+        .dashboardBackdrop(opacity: engine.backdropOpacity,
+                           cornerRadius: size.cornerRadius + 6)
+        .environment(\.cardInkOpacity, engine.cardOpacity)
         // Das ganze Fenster nimmt Dateien an, nicht nur die Ablage-Karte —
         // beim Ziehen soll man nicht zielen müssen.
         .dropDestination(for: URL.self) { urls, _ in
@@ -53,13 +58,14 @@ struct DropdownView: View {
         .padding(size.outerPadding)
     }
 
-    /// Die vier Mess-Karten, dahinter optional die Ablage.
+    /// Die vier Mess-Karten und optional die Ablage — in der Reihenfolge,
+    /// die unter Einstellungen → Anzeige eingestellt ist.
     private var visibleCards: [DashboardCard] {
-        var cards: [DashboardCard] = [.system, .internalDrives, .externalDrives, .network]
+        var cards: Set<DashboardCard> = [.system, .internalDrives, .externalDrives, .network]
         if shelf.showInDropdown, Entitlements.shared.isUnlocked(.fileShelf) {
-            cards.append(.shelf)
+            cards.insert(.shelf)
         }
-        return cards
+        return engine.ordered(cards)
     }
 
     private func card(_ card: DashboardCard, compact: Bool = false) -> some View {
