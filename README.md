@@ -204,7 +204,14 @@ Material-Optik (`GlassCompat.swift`). Kein Sandbox-Entitlement nötig.
   `--open-settings` das Einstellungsfenster über denselben Weg wie das
   Zahnrad). **`--shoot` bildet das Menüleisten-Fenster nicht nach** — es setzt
   seine Größe selbst; Änderungen am Dropdown-Aufbau nur mit `--shoot menu`
-  prüfen.
+  prüfen. Zusätzlich `--demo-shelf`: ersetzt für die Aufnahme den Inhalt der
+  Ablage durch Dateien aus dem Projekt, damit keine Arbeitsdateien in den
+  README-Bildern landen. Was die Bilder sonst zeigen (Anordnung, sichtbare
+  Karten, Kurzbefehl-Auswahl), steht in den UserDefaults — vor einem
+  Bilderlauf `defaults export digital.jrn.floosh …` sichern. Vorsicht beim
+  Zurückspielen: `defaults import` **ersetzt die Domain nicht, es mergt** —
+  testweise gesetzte Schlüssel bleiben stehen und müssen einzeln gelöscht
+  werden.
 - App-Icon wird per `Tools/make-icon.sh` aus den Marken-Pfaden in
   `BrandLogos.swift` generiert (Navy-Kachel + Doppel-Blitz) und liegt als
   `AppIcon.icns` im Repo.
