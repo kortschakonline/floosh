@@ -65,6 +65,9 @@ struct DropdownView: View {
         if shelf.showInDropdown, Entitlements.shared.isUnlocked(.fileShelf) {
             cards.insert(.shelf)
         }
+        if ShortcutsService.shared.showInDropdown, Entitlements.shared.isUnlocked(.shortcuts) {
+            cards.insert(.shortcuts)
+        }
         return engine.ordered(cards)
     }
 
@@ -160,6 +163,7 @@ struct DashboardCardView: View {
         case .externalDrives: GroupCard(engine: engine, group: .externalDrives, compact: compact)
         case .network: GroupCard(engine: engine, group: .network, compact: compact)
         case .shelf: ShelfCard(engine: engine, shelf: shelf)
+        case .shortcuts: ShortcutsCard(engine: engine, shortcuts: .shared)
         }
     }
 }

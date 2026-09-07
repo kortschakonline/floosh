@@ -15,6 +15,8 @@ enum Feature: String, CaseIterable, Identifiable {
     case desktopPanel
     // Ablage
     case fileShelf
+    // Werkzeuge
+    case keepAwake, cleanScreen, shortcuts
     // Allgemein
     case updateCheck
 

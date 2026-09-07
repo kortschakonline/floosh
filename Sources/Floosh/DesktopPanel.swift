@@ -63,7 +63,7 @@ final class PanelSettings {
         opacity = defaults.object(forKey: "panel.opacity") as? Double ?? 1
         layout = DropdownLayout(rawValue: defaults.string(forKey: "panel.layout") ?? "") ?? .list
         let saved = defaults.stringArray(forKey: "panel.cards")?.compactMap(Card.init(rawValue:))
-        cards = saved.map(Set.init) ?? Set(Card.allCases.filter { $0 != .shelf })
+        cards = saved.map(Set.init) ?? Set(Card.allCases.filter { $0 != .shelf && $0 != .shortcuts })
         allSpaces = defaults.object(forKey: "panel.allSpaces") as? Bool ?? true
         screenName = defaults.string(forKey: "panel.screen") ?? ""
     }

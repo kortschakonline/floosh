@@ -127,6 +127,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
     case externalDrives = "extern"
     case network = "netzwerk"
     case shelf
+    case shortcuts
 
     var id: String { rawValue }
 
@@ -137,6 +138,19 @@ enum DashboardCard: String, CaseIterable, Identifiable {
         case .externalDrives: SpeedGroup.externalDrives.title
         case .network: SpeedGroup.network.title
         case .shelf: "Ablage"
+        case .shortcuts: "Kurzbefehle"
+        }
+    }
+
+    /// Symbol für Listen in den Einstellungen.
+    var symbol: String {
+        switch self {
+        case .system: "cpu"
+        case .internalDrives: SpeedGroup.internalDrives.symbol
+        case .externalDrives: SpeedGroup.externalDrives.symbol
+        case .network: SpeedGroup.network.symbol
+        case .shelf: "tray"
+        case .shortcuts: "square.stack.3d.up"
         }
     }
 

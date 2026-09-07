@@ -125,7 +125,7 @@ enum RealWindowShots {
         // unter die Fensterknöpfe (NSHostingView zieht das Fenster sonst
         // wieder auf die Idealbreite zusammen)
         window.contentView = NSHostingView(rootView:
-            SettingsWindow(engine: engine, initialTab: tab).frame(width: 520))
+            SettingsWindow(engine: engine, initialTab: tab).frame(width: 620))
         window.setContentSize(window.contentView!.fittingSize)
         center(window)
         window.orderFront(nil)

@@ -42,6 +42,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MainActor.assumeIsolated {
             FanService.shared.relinquishOnQuit()
             FileShelf.shared.clearOnQuitIfNeeded()
+            // Sonst bliebe die Energie-Zusicherung bis zum Abmelden stehen
+            KeepAwake.shared.stop()
+            CleanScreen.shared.stop()
         }
     }
 }

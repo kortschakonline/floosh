@@ -2,7 +2,7 @@ import SwiftUI
 import ServiceManagement
 
 enum SettingsTab: String, CaseIterable {
-    case display, measurement, fans, panel, general
+    case display, measurement, fans, panel, tools, general
 }
 
 /// Eigenständiges Einstellungs-Fenster (⌘,) mit Tabs — hier ist Platz für mehr.
@@ -49,6 +49,9 @@ struct SettingsWindow: View {
                 Tab("Panel", systemImage: "rectangle.on.rectangle", value: .panel) {
                     PanelSettingsTab(panel: PanelSettings.shared)
                 }
+                Tab("Werkzeuge", systemImage: "wrench.and.screwdriver", value: .tools) {
+                    ToolsSettingsTab()
+                }
                 Tab("Allgemein", systemImage: "gearshape", value: .general) {
                     generalTab
                 }
@@ -67,6 +70,9 @@ struct SettingsWindow: View {
                 PanelSettingsTab(panel: PanelSettings.shared)
                     .tabItem { Label("Panel", systemImage: "rectangle.on.rectangle") }
                     .tag(SettingsTab.panel)
+                ToolsSettingsTab()
+                    .tabItem { Label("Werkzeuge", systemImage: "wrench.and.screwdriver") }
+                    .tag(SettingsTab.tools)
                 generalTab
                     .tabItem { Label("Allgemein", systemImage: "gearshape") }
                     .tag(SettingsTab.general)
@@ -532,7 +538,7 @@ private struct CardOrderEditor: View {
         VStack(spacing: 0) {
             ForEach(Array(engine.cardOrder.enumerated()), id: \.element) { index, card in
                 HStack(spacing: 8) {
-                    Image(systemName: symbol(card))
+                    Image(systemName: card.symbol)
                         .foregroundStyle(.secondary)
                         .frame(width: 18)
                     Text(card.title)
@@ -563,13 +569,136 @@ private struct CardOrderEditor: View {
         }
     }
 
-    private func symbol(_ card: DashboardCard) -> String {
-        switch card {
-        case .system: "cpu"
-        case .internalDrives: SpeedGroup.internalDrives.symbol
-        case .externalDrives: SpeedGroup.externalDrives.symbol
-        case .network: SpeedGroup.network.symbol
-        case .shelf: "tray"
+}
+
+/// Werkzeuge: Wachhalten, Bildschirm reinigen und die Kurzbefehle-Karte.
+private struct ToolsSettingsTab: View {
+    @Bindable private var awake = KeepAwake.shared
+    @Bindable private var clean = CleanScreen.shared
+    @Bindable private var shortcuts = ShortcutsService.shared
+    @Bindable private var tools = ToolSettings.shared
+
+    var body: some View {
+        Form {
+            Section("Wachhalten") {
+                Picker("Dauer", selection: $awake.duration) {
+                    ForEach(KeepAwake.Duration.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .disabled(awake.isActive)
+
+                LabeledContent("Zustand") {
+                    HStack(spacing: 8) {
+                        if awake.isActive {
+                            Text(awake.remainingText.map { "aktiv, noch \($0)" } ?? "aktiv")
+                                .foregroundStyle(.green)
+                        } else {
+                            Text("aus").foregroundStyle(.secondary)
+                        }
+                        Button(awake.isActive ? "Beenden" : "Starten") { awake.toggle() }
+                    }
+                }
+                Text("Verhindert, dass der Bildschirm in den Ruhezustand geht — wie „caffeinate\u{201C}, ohne Terminal. Wird beim Beenden von floosh und beim Ablauf der Dauer automatisch aufgehoben und startet nach einem Neustart nicht von selbst wieder.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Bildschirm reinigen") {
+                Picker("Dauer", selection: $clean.seconds) {
+                    ForEach(CleanScreen.choices, id: \.self) { Text("\($0) s").tag($0) }
+                }
+                .pickerStyle(.segmented)
+
+                Button("Jetzt abdunkeln") { clean.start() }
+
+                Text("Dunkelt alle Bildschirme ab und schluckt Klicks und Tasten, damit beim Putzen nichts ausgelöst wird. Endet nach der eingestellten Zeit oder sofort mit Escape. Systemweite Kürzel wie ⌘-Tab fängt macOS vor jeder App ab — die bleiben aktiv.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("In der System-Karte") {
+                Toggle("Knöpfe für Wachhalten und Reinigen zeigen", isOn: $tools.showTools)
+            }
+
+            Section("Kurzbefehle") {
+                if shortcuts.isAvailable {
+                    Toggle("Karte im Dropdown anzeigen", isOn: $shortcuts.showInDropdown)
+                        .featureGated(.shortcuts)
+
+                    if shortcuts.available.isEmpty {
+                        LabeledContent("Kurzbefehle") {
+                            Button("Laden") { Task { await shortcuts.refresh() } }
+                        }
+                    } else {
+                        ShortcutsChooser(shortcuts: shortcuts)
+                    }
+
+                    Text("Ausgewählte Kurzbefehle erscheinen als Knöpfe in der Karte und laufen im Hintergrund (`shortcuts run`). Die Karte lässt sich unter Anzeige → Reihenfolge einsortieren und im Tab „Panel\u{201C} auch aufs Desktop-Panel legen.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Auf diesem Mac gibt es die Kurzbefehle-Kommandozeile nicht (`/usr/bin/shortcuts`).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .task { await shortcuts.refresh() }
+    }
+}
+
+/// Auswahl und Reihenfolge der Kurzbefehle: oben die gewählten (sortierbar),
+/// darunter alle übrigen zum Hinzufügen.
+private struct ShortcutsChooser: View {
+    @Bindable var shortcuts: ShortcutsService
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if !shortcuts.chosen.isEmpty {
+                ForEach(Array(shortcuts.chosen.enumerated()), id: \.element) { index, name in
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.tint)
+                        Text(name).lineLimit(1)
+                        Spacer()
+                        Button { shortcuts.move(name, by: -1) } label: { Image(systemName: "chevron.up") }
+                            .disabled(index == 0)
+                        Button { shortcuts.move(name, by: 1) } label: { Image(systemName: "chevron.down") }
+                            .disabled(index == shortcuts.chosen.count - 1)
+                        Button { shortcuts.toggle(name) } label: { Image(systemName: "minus.circle") }
+                            .help("Aus der Karte entfernen")
+                    }
+                    .buttonStyle(.borderless)
+                }
+                Divider()
+            }
+
+            let rest = shortcuts.available.filter { !shortcuts.chosen.contains($0) }
+            if rest.isEmpty {
+                Text("Alle Kurzbefehle sind ausgewählt.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(rest, id: \.self) { name in
+                    HStack(spacing: 8) {
+                        Image(systemName: "circle")
+                            .foregroundStyle(.secondary)
+                        Text(name).lineLimit(1)
+                        Spacer()
+                        Button { shortcuts.toggle(name) } label: { Image(systemName: "plus.circle") }
+                            .help("Als Knopf in die Karte")
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+
+            HStack {
+                Spacer()
+                Button("Liste neu laden") { Task { await shortcuts.refresh() } }
+                    .buttonStyle(.borderless)
+                    .font(.caption)
+            }
         }
     }
 }

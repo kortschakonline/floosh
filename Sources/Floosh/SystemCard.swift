@@ -5,6 +5,9 @@ import SwiftUI
 struct SystemCard: View {
     let engine: StatsEngine
     @Bindable var fans: FanService
+    @Bindable var awake: KeepAwake = .shared
+    @Bindable var clean: CleanScreen = .shared
+    var tools: ToolSettings = .shared
 
     static let tint = Color(red: 0.68, green: 0.48, blue: 1.0) // Violett
 
@@ -17,12 +20,61 @@ struct SystemCard: View {
             if !engine.system.fans.isEmpty {
                 fanSection
             }
+            if tools.showTools {
+                toolRow
+            }
         }
         // Im Raster füllt die Karte die Zeilenhöhe (Glas bis zum Rand)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(size.padding)
         .cardGlass(cornerRadius: size.cornerRadius)
         .onAppear { fans.refreshHelperState() }
+    }
+
+    // MARK: Werkzeuge
+
+    /// Wachhalten und Bildschirm reinigen — zwei Knöpfe, wie bei den
+    /// Lüfter-Modi darüber.
+    private var toolRow: some View {
+        HStack(spacing: 6) {
+            Button {
+                awake.toggle()
+            } label: {
+                toolLabel(symbol: awake.isActive ? "cup.and.saucer.fill" : "cup.and.saucer",
+                          text: awake.isActive ? (awake.remainingText ?? "wach") : "Wachhalten",
+                          active: awake.isActive)
+            }
+            .buttonStyle(.plain)
+            .featureGated(.keepAwake)
+            .help(awake.isActive
+                  ? "Wachhalten beenden — der Bildschirm darf wieder schlafen"
+                  : "Bildschirm wachhalten (\(awake.duration.title))")
+
+            Button {
+                clean.start()
+            } label: {
+                toolLabel(symbol: "sparkles", text: "Reinigen", active: false)
+            }
+            .buttonStyle(.plain)
+            .featureGated(.cleanScreen)
+            .help("Bildschirm für \(clean.seconds) s abdunkeln und Eingaben sperren")
+        }
+    }
+
+    private func toolLabel(symbol: String, text: String, active: Bool) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol)
+                .font(.system(size: size.glyphFont))
+            Text(text)
+                .font(.caption)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+        .background(active ? Self.tint.opacity(0.28) : Color.primary.opacity(0.07),
+                    in: .rect(cornerRadius: 8))
+        .foregroundStyle(active ? Self.tint : .primary)
+        .contentShape(.rect(cornerRadius: 8))
     }
 
     // MARK: Kopfzeile

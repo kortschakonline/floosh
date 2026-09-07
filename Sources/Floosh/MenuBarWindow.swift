@@ -312,16 +312,17 @@ final class SettingsWindowController {
             // Gleicher Aufbau wie im Shoot-Hook: Fenster zuerst, dann die
             // Hosting-View setzen. Über `contentViewController` stürzt AppKit
             // beim Aufbau der Tab-Leiste ab.
-            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 600),
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 600),
                              styleMask: [.titled, .closable, .resizable],
                              backing: .buffered, defer: false)
             w.title = "floosh"
             w.isReleasedWhenClosed = false
             w.toolbarStyle = .preference
-            // Etwas breiter als die 440-pt-Form, sonst rutscht die Tab-Leiste
-            // unter die Fensterknöpfe
+            // Breite ist von der Tab-Leiste diktiert: Passen die Tabs nicht
+            // nebeneinander, klappt macOS sie in ein »-Überlaufmenü — mit
+            // sechs Tabs reichen 520 pt nicht mehr.
             let host = NSHostingView(rootView:
-                SettingsWindow(engine: engine, fixedHeight: false).frame(width: 520))
+                SettingsWindow(engine: engine, fixedHeight: false).frame(width: 620))
             // Idealhöhe messen, solange die Hosting-View noch ihre volle
             // Größe meldet …
             let ideal = host.fittingSize.height
@@ -330,7 +331,7 @@ final class SettingsWindowController {
             host.sizingOptions = [.minSize]
             w.contentView = host
             let maxHeight = (NSScreen.screens.first?.visibleFrame.height ?? 900) - 60
-            w.setContentSize(NSSize(width: 520, height: min(max(ideal, 320), maxHeight)))
+            w.setContentSize(NSSize(width: 620, height: min(max(ideal, 320), maxHeight)))
             w.center()
             window = w
         }
