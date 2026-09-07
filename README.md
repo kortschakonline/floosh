@@ -47,13 +47,35 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   **Raster** (alle Karten paarweise, doppelte Breite). Die Zeilenaufteilung
   liegt in `DashboardCard.rows(_:layout:)` und gilt für Dropdown und Panel;
   halbbreite Karten rendern kompakt (Werte unter dem Titel, kein Geräte-Teil).
+- Erscheinungsbild: Bis 1.6 hatte nur jede Karte Glas — zwischen den Karten
+  schien der Schreibtisch durch. Dahinter liegt jetzt eine durchgehende
+  Trägerfläche (Regler „Fläche"), dazu eine optionale Füllung hinter jeder
+  Karte (Regler „Kacheln"). Beide Ebenen sitzen zwischen Glas und Inhalt, damit
+  Beschriftungen scharf bleiben — anders als die Panel-Deckkraft, die über
+  `alphaValue` das ganze Fenster blass macht. Die Reihenfolge der Karten ist
+  frei einstellbar und gilt für Dropdown und Panel gemeinsam.
+- Werkzeuge in der System-Karte: **Wachhalten** hält über eine `IOPMAssertion`
+  den Bildschirm wach (wie `caffeinate`, ohne Prozess) — wahlweise ohne Ende
+  oder mit Zeitgrenze, nicht über Neustarts gespeichert und beim Beenden
+  aufgehoben. **Reinigen** legt schwarze Fenster über alle Bildschirme, die
+  Klicks und Tasten schlucken; Escape beendet sofort, zusätzlich läuft ein
+  Countdown. Die Fenster sind eine `NSWindow`-Unterklasse mit
+  `canBecomeKey = true`, weil rahmenlose Fenster sonst keine Tastatur bekommen
+  und der Modus zur Falle würde. Systemweite Kürzel (⌘-Tab, Lautstärke) fängt
+  macOS vor jeder App ab — die bleiben aktiv.
+- Kurzbefehle-Karte (`ShortcutsCard.swift`): ausgewählte Kurzbefehle als Knöpfe,
+  ausgeführt über `/usr/bin/shortcuts` im Hintergrund. Das URL-Schema
+  `shortcuts://run-shortcut` wäre der falsche Weg — es holt die Kurzbefehle-App
+  nach vorn. Gelöschte Kurzbefehle fallen beim Einlesen aus der Auswahl.
 - Einstellungen in eigenem Fenster (⌘, / Zahnrad) mit Tabs **Anzeige · Messung ·
-  Lüfter · Panel · Allgemein**: Stil, Symbol, Einheit MB/s / Mbit/s, Menüleisten-Zusätze,
+  Lüfter · Panel · Werkzeuge · Allgemein** (620 pt breit — mit sechs Tabs klappt
+  macOS die Leiste sonst in ein Überlaufmenü): Stil, Symbol, Einheit MB/s / Mbit/s, Menüleisten-Zusätze,
   Anordnung, Kachelgröße Klein/Mittel/Groß, Markierung der aktiven Kachel,
   Intervall 0,5–2 s, Diagramm-Fenster 30–120 s, Quellen-Toggles,
   Lüfterkurven-Editor (Sensor, bis zu 8 Stützpunkte, Live-Marker),
-  Lüfter-Favoriten & Helper-Status, Ablage, Login-Start (`SMAppService`),
-  Update-Check.
+  Lüfter-Favoriten & Helper-Status, Ablage samt Fangstreifen, Trägerfläche und
+  Kachel-Reihenfolge, Wachhalten, Reinigen, Kurzbefehl-Auswahl, Login-Start
+  (`SMAppService`), Update-Check.
 - Desktop-Panel (`DesktopPanel.swift`): rahmenloses, transparentes `NSPanel`
   mit denselben Karten — auf Desktop-Ebene (`desktopIconWindow − 1`, hinter
   allen Fenstern, auf allen Schreibtischen) oder `.floating`. Ecke + Randabstand,
@@ -77,6 +99,16 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   QuickLook (`QLThumbnailGenerator`, als PNG-Daten über die Isolationsgrenze),
   gespeichert werden Bookmarks — Umbenennen und Verschieben verlieren den Eintrag
   nicht, Gelöschtes wird orange markiert. Kopiert wird nichts, max. 20 Einträge.
+- Fangstreifen (`DragCatcher.swift`): Sobald irgendwo im System Dateien gezogen
+  werden, erscheint ein Ablegefeld an der gewählten Bildschirmkante — auf dem
+  Bildschirm, auf dem der Zeiger gerade ist. Erkannt wird das ohne Event-Tap und
+  ohne globalen Monitor (die bräuchten Bedienungshilfen bzw.
+  Eingabeüberwachung), nämlich aus zwei freien Abfragen im Messtakt:
+  `NSEvent.pressedMouseButtons` und dem Drag-Pasteboard. Ein Drag zählt nur,
+  wenn dessen `changeCount` neuer ist als der beim letzten Loslassen gemerkte —
+  sonst löst der Rest des vorigen Drags beim nächsten Mausklick erneut aus.
+  Grund für den Streifen: Am oberen Bildschirmrand greift zuerst macOS zu
+  (Mission Control), und das Desktop-Panel liegt hinter allen Fenstern.
 - Update-Hinweis: `UpdateChecker` fragt beim Start und alle 6 Stunden die
   GitHub-Releases-API (`releases/latest`) ab und vergleicht das Tag mit der
   Bundle-Version; neue Versionen erscheinen als Zeile im Dropdown und unter
@@ -163,6 +195,7 @@ Material-Optik (`GlassCompat.swift`). Kein Sandbox-Entitlement nötig.
   ein externes `screencapture` — so entstanden die README-Screenshots
   (`--shoot settings` nur das Einstellungsfenster, `--shoot panel` das
   Desktop-Panel, `--shoot menu` das echte Menüleisten-Fenster,
+  `--shoot catcher` den Fangstreifen,
   `--open-settings` das Einstellungsfenster über denselben Weg wie das
   Zahnrad). **`--shoot` bildet das Menüleisten-Fenster nicht nach** — es setzt
   seine Größe selbst; Änderungen am Dropdown-Aufbau nur mit `--shoot menu`

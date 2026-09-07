@@ -9,6 +9,7 @@ enum SettingsTab: String, CaseIterable {
 struct SettingsWindow: View {
     @Bindable var engine: StatsEngine
     @Bindable private var shelf = FileShelf.shared
+    @Bindable private var catcher = DragCatcher.shared
     @State private var selectedTab: SettingsTab
     /// In einem eigenen, größenveränderbaren Fenster darf der Inhalt scrollen —
     /// der Anzeige-Tab ist höher als der Bildschirm.
@@ -180,6 +181,17 @@ struct SettingsWindow: View {
                     .featureGated(.fileShelf)
                 Toggle("Beim Beenden von floosh leeren", isOn: $shelf.clearOnQuit)
                     .featureGated(.fileShelf)
+
+                Toggle("Fangstreifen beim Ziehen einblenden", isOn: $catcher.enabled)
+                    .featureGated(.dragCatcher)
+                Picker("Kante", selection: $catcher.edge) {
+                    ForEach(DragCatcher.Edge.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .disabled(!catcher.enabled)
+                Text("Sobald irgendwo Dateien gezogen werden, erscheint ein Ablegefeld an dieser Kante des Bildschirms, auf dem der Zeiger gerade ist — kein Zielen auf das Menüleisten-Symbol, kein Wegräumen von Fenstern.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Text("Dateien in die Ablage ziehen, um sie kurz zu parken, und von dort weiterziehen. floosh merkt sich nur den Ort und kopiert nichts. Im Desktop-Panel lässt sich die Ablage unter „Karten\u{201C} zuschalten.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

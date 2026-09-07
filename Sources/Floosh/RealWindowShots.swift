@@ -43,6 +43,21 @@ enum RealWindowShots {
                 try? await Task.sleep(for: .seconds(10))
                 controller.close()
                 return
+            case "catcher":
+                // Der Fangstreifen lässt sich nicht „von selbst" auslösen —
+                // hier wird er direkt gezeigt, um ihn ansehen zu können.
+                try? await Task.sleep(for: .seconds(2))
+                DragCatcherWindow.shared.show(edge: .right)
+                try? await Task.sleep(for: .seconds(1))
+                if let frame = DragCatcherWindow.shared.frame {
+                    announceRegion("CATCHER", frame: frame)
+                } else {
+                    print("CATCHER-FEHLER: kein Fenster")
+                    flushStdout()
+                }
+                try? await Task.sleep(for: .seconds(10))
+                DragCatcherWindow.shared.hide()
+                return
             case "panel":
                 engine.chartWindow = 30
                 try? await Task.sleep(for: .seconds(34))
