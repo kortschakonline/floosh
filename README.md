@@ -33,6 +33,14 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   minimale Root-Komponente. Sicherheitsnetz: ohne Ping der App stellt er nach
   3 Minuten selbstständig auf Automatik zurück; auch beim Beenden der App wird
   die Regelung zurückgegeben.
+  **`SMAppService.status` allein taugt nicht als Prüfung:** `register()`
+  hinterlegt beim Daemon eine Startbedingung auf den cdhash der Helper-Binary;
+  passt die nicht mehr, lehnt launchd den Start mit `EX_CONFIG` ab, während
+  der Status weiter `.enabled` meldet. floosh spricht den Helfer beim Start
+  deshalb wirklich an und bietet bei Schweigen eine Neuregistrierung an —
+  die zwischen `unregister()` und `register()` eine Pause braucht, sonst
+  scheitert das Anmelden mit „Operation not permitted" und es ist gar nichts
+  mehr registriert.
 - Menüleisten-Label: nur Symbol / eine Zeile / zwei Zeilen, Symbol-Stil Outline /
   Gefüllt / Farbig (Gruppenfarbe), Werte beide / nur Lesen / nur Schreiben.
   Zusätze: CPU & GPU zweizeilig als Prozentzahl oder Mini-Balken, Temperatur
@@ -202,7 +210,10 @@ Material-Optik (`GlassCompat.swift`). Kein Sandbox-Entitlement nötig.
   Desktop-Panel, `--shoot menu` das echte Menüleisten-Fenster,
   `--shoot catcher` den Fangstreifen,
   `--open-settings` das Einstellungsfenster über denselben Weg wie das
-  Zahnrad). **`--shoot` bildet das Menüleisten-Fenster nicht nach** — es setzt
+  Zahnrad). Für den Lüfter-Helfer gibt es eigene Hooks: `--helper-status`
+  zeigt den Zustand, `--helper-ping` prüft per XPC, ob der Helfer wirklich
+  antwortet, `--repair-helper` meldet ihn ab und neu an.
+  **`--shoot` bildet das Menüleisten-Fenster nicht nach** — es setzt
   seine Größe selbst; Änderungen am Dropdown-Aufbau nur mit `--shoot menu`
   prüfen. Zusätzlich `--demo-shelf`: ersetzt für die Aufnahme den Inhalt der
   Ablage durch Dateien aus dem Projekt, damit keine Arbeitsdateien in den

@@ -289,6 +289,8 @@ private struct FanSettingsTab: View {
                         Button("In Systemeinstellungen erlauben …") { fans.openApprovalSettings() }
                     case .needsRegistration:
                         Button("Aktivieren …") { fans.registerHelper() }
+                    case .staleRegistration:
+                        Button("Neu registrieren …") { fans.reregisterHelper() }
                     case .unavailable(let reason):
                         Text(reason)
                             .font(.caption)
@@ -298,6 +300,11 @@ private struct FanSettingsTab: View {
                 Text("Manuelle Lüftersteuerung und Kurve brauchen einen kleinen Root-Helfer (einmalige Freigabe unter Anmeldeobjekte). Sicherheitsnetz: Ohne Lebenszeichen der App schaltet er nach 3 Minuten selbstständig zurück auf Automatik.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if fans.helperState == .staleRegistration {
+                    Text("Die vorhandene Registrierung gehört zu einer älteren Ausgabe von floosh. Weil die App ad-hoc signiert ist, bekommt jeder Build eine neue Kennung, und das System lässt den Helfer dann nicht mehr starten. „Neu registrieren\u{201C} meldet ihn ab und wieder an; danach kann eine erneute Freigabe unter Anmeldeobjekte nötig sein.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
             }
         }
         .formStyle(.grouped)

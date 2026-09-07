@@ -311,6 +311,13 @@ struct SystemCard: View {
                 Button("Systemeinstellungen öffnen …") { fans.openApprovalSettings() }
                     .compatGlassButton()
                     .controlSize(.small)
+            case .staleRegistration:
+                Text("Der System-Helfer passt nicht mehr zu dieser Ausgabe von floosh.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Button("Neu registrieren …") { fans.reregisterHelper() }
+                    .compatGlassButton()
+                    .controlSize(.small)
             case .unavailable(let reason):
                 Text(reason)
                     .font(.caption2)

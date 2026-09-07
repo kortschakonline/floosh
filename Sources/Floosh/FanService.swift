@@ -32,6 +32,9 @@ final class FanService {
         case unavailable(String)   // z. B. nicht registrierbar (nicht in /Applications)
         case needsRegistration
         case needsApproval
+        /// Registriert, aber die Registrierung gehört zu einer älteren
+        /// Ausgabe der App — der Helper startet nicht (siehe `syncRegistration`).
+        case staleRegistration
         case ready
     }
 
@@ -76,7 +79,66 @@ final class FanService {
             mode = .curve
         }
         refreshHelperState()
+        verifyHelperReachable()
     }
+
+    /// Prüft beim Start, ob der registrierte Helper wirklich antwortet.
+    ///
+    /// Nötig, weil `service.status` lügt: `SMAppService.register()` hinterlegt
+    /// beim Daemon eine Startbedingung auf den *cdhash* der Helper-Binary.
+    /// Passt die nicht mehr — etwa weil die Registrierung von einer viel
+    /// älteren Ausgabe stammt —, lehnt launchd den Start mit `EX_CONFIG` ab,
+    /// während der Status weiterhin `.enabled` meldet. Erst der XPC-Kontakt
+    /// bringt es an den Tag; der Fehlerpfad in `proxy()` setzt dann
+    /// `staleRegistration`.
+    ///
+    /// Bewusst kein Vergleich von Build-Nummern: Der cdhash der Helper-Binary
+    /// ändert sich nicht bei jedem Release, ein Update allein ist also kein
+    /// Grund, dem Benutzer eine Neuregistrierung samt Freigabe zuzumuten.
+    private func verifyHelperReachable() {
+        guard case .ready = helperState else { return }
+        proxy()?.version { _ in }
+    }
+
+    /// Registrierung erneuern: abmelden, warten, neu anmelden.
+    ///
+    /// `register()` allein genügt nicht — auf einen bereits registrierten
+    /// Dienst wirkt es nicht, die alte Startbedingung bliebe stehen. Und das
+    /// Anmelden darf dem Abmelden nicht auf dem Fuß folgen: Solange das
+    /// System den alten Eintrag noch abräumt, scheitert es mit „Operation not
+    /// permitted" — und dann wäre gar nichts mehr registriert. Deshalb mit
+    /// Pause und mehreren Anläufen.
+    func reregisterHelper() {
+        guard !isReregistering else { return }
+        isReregistering = true
+        lastError = nil
+        Task { @MainActor in
+            defer { isReregistering = false }
+            try? await service.unregister()
+            var lastFailure: Error?
+            for attempt in 0..<3 {
+                try? await Task.sleep(for: .milliseconds(attempt == 0 ? 700 : 1800))
+                do {
+                    try service.register()
+                    connection?.invalidate()
+                    connection = nil
+                    refreshHelperState()
+                    return
+                } catch {
+                    lastFailure = error
+                }
+            }
+            refreshHelperState()
+            if helperState == .needsApproval {
+                SMAppService.openSystemSettingsLoginItems()
+            } else if let lastFailure {
+                helperState = .unavailable("Neuregistrierung fehlgeschlagen: \(lastFailure.localizedDescription)")
+            }
+        }
+    }
+
+    /// Läuft gerade eine Neuregistrierung? (Doppelklicks abfangen.)
+    private(set) var isReregistering = false
 
     // MARK: Helper-Registrierung
 
@@ -126,11 +188,30 @@ final class FanService {
         }
         return connection?.remoteObjectProxyWithErrorHandler { [weak self] error in
             Task { @MainActor in
-                self?.lastError = "Helper nicht erreichbar: \(error.localizedDescription)"
-                self?.connection?.invalidate()
-                self?.connection = nil
+                guard let self else { return }
+                self.lastError = "Helper nicht erreichbar: \(error.localizedDescription)"
+                self.connection?.invalidate()
+                self.connection = nil
+                // Meldet das System den Dienst als aktiv, obwohl niemand
+                // antwortet, passt fast immer die Registrierung nicht mehr
+                // zur Binary.
+                if case .ready = self.helperState {
+                    self.helperState = .staleRegistration
+                }
             }
         } as? FlooshFanHelperProtocol
+    }
+
+    /// Nur für `--helper-ping`: fragt die Protokoll-Version des laufenden
+    /// Helpers ab. Kommt eine Antwort, steht die privilegierte Verbindung.
+    func pingHelperForDiagnostics(_ done: @escaping @Sendable (String) -> Void) {
+        guard let proxy = proxy() else {
+            done("Antwort: keine Verbindung möglich")
+            return
+        }
+        proxy.version { version in
+            done("Antwort: Helper läuft, Protokoll-Version \(version) (erwartet \(fanHelperVersion))")
+        }
     }
 
     // MARK: Steuerung
