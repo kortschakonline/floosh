@@ -16,6 +16,7 @@ import AppKit
 enum RealWindowShots {
 
     static func run(engine: StatsEngine) async {
+        if CommandLine.arguments.contains("--demo-shelf") { fillShelfForScreenshots() }
         // `--shoot settings [display|measurement|fans|panel|general]`: nur das
         // Einstellungsfenster (optional mit Start-Tab), ohne Warmlaufphase;
         // `--shoot panel`: nur das Desktop-Panel (auf Backdrop, nach Warmlauf)
@@ -81,13 +82,27 @@ enum RealWindowShots {
         await presentSettings(engine: engine)
     }
 
+    /// Für die README-Bilder: die Ablage mit Dateien aus dem Projekt füllen
+    /// statt mit dem, was gerade zufällig darin liegt. Der Aufruf ersetzt den
+    /// gespeicherten Inhalt — nur für `--demo-shelf` gedacht.
+    private static func fillShelfForScreenshots() {
+        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let candidates = [
+            "docs/shot-panel.png", "docs/shot-grid.png", "README.md",
+            "docs", "Tools/release.sh",
+        ].map { root.appendingPathComponent($0) }
+        let existing = candidates.filter { FileManager.default.fileExists(atPath: $0.path) }
+        FileShelf.shared.clear()
+        FileShelf.shared.add(existing)
+    }
+
     // MARK: Dropdown
 
     private static func presentDropdown(engine: StatsEngine) async {
-        // Das Dropdown mit der dunklen Glas-Rückwand des Menü-Fensters
+        // Keine künstliche Rückwand mehr: Seit 1.7 bringt das Dropdown seine
+        // eigene Trägerfläche mit (Einstellung „Fläche").
         await presentOnBackdrop("DROPDOWN", width: engine.dropdownWidth) {
             DropdownView(engine: engine)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 26))
         }
     }
 

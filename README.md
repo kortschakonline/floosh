@@ -121,25 +121,30 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
 ## Screenshots
 
 <p>
-  <img src="docs/shot-dropdown.png" alt="Liquid-Glass-Dropdown mit System-Karte (CPU/GPU/Temperatur, Lüfterkurve) und Live-Diagrammen" width="360" align="top">
+  <img src="docs/shot-dropdown.png" alt="Dropdown auf der neuen Trägerfläche: System-Karte mit Wachhalten und Reinigen, Live-Diagramme, Ablage und Kurzbefehle" width="330" align="top">
   &nbsp;&nbsp;
-  <img src="docs/shot-settings.png" alt="Einstellungen — Anzeige" width="380" align="top">
+  <img src="docs/shot-settings.png" alt="Einstellungen — Anzeige mit Hintergrund-Reglern, Kachel-Reihenfolge und Fangstreifen" width="330" align="top">
 </p>
 <p>
+  <img src="docs/shot-tools.png" alt="Einstellungen — Werkzeuge: Wachhalten, Bildschirm reinigen, Kurzbefehl-Auswahl" width="380" align="top">
+  &nbsp;&nbsp;
   <img src="docs/shot-fans.png" alt="Einstellungen — Lüfterkurve mit Stützpunkten und Live-Marker" width="380" align="top">
 </p>
 <p>
   <img src="docs/shot-grid.png" alt="Dropdown im Raster-Layout (2×2)" width="620">
 </p>
 <p>
-  <img src="docs/shot-panel.png" alt="Desktop-Panel auf dem Schreibtisch" width="360" align="top">
+  <img src="docs/shot-panel.png" alt="Desktop-Panel auf dem Schreibtisch" width="330" align="top">
   &nbsp;&nbsp;
   <img src="docs/shot-panel-settings.png" alt="Einstellungen — Panel" width="380" align="top">
 </p>
 <p>
-  <img src="docs/shot-split.png" alt="Dropdown im geteilten Layout: Intern und Extern nebeneinander, darunter die Ablage" width="330" align="top">
+  <img src="docs/shot-split.png" alt="Dropdown im geteilten Layout: Intern und Extern nebeneinander, darunter Ablage und Kurzbefehle" width="330" align="top">
   &nbsp;&nbsp;
-  <img src="docs/shot-shelf.png" alt="Ablage: geparkte Dateien mit QuickLook-Vorschau" width="330" align="top">
+  <img src="docs/shot-shelf.png" alt="Ablage: geparkte Dateien mit QuickLook-Vorschau" width="380" align="top">
+</p>
+<p>
+  <img src="docs/shot-catcher.png" alt="Fangstreifen: erscheint beim Ziehen am Bildschirmrand" width="210">
 </p>
 
 ## Bauen
