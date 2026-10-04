@@ -137,11 +137,13 @@ struct MacInfoCard: View {
         let _ = engine.lastSampleDate
         let volume = MacInfo.startupVolume
         VStack(alignment: .leading, spacing: size.spacing) {
-            HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: 14) {
+                // Breiter als hoch: Flache Geräte wie der Mac mini füllen so
+                // die Breite aus, statt im Quadrat winzig zu wirken
                 Image(nsImage: NSImage(named: NSImage.computerName) ?? NSImage())
                     .resizable()
                     .scaledToFit()
-                    .frame(width: size == .small ? 44 : 56, height: size == .small ? 44 : 56)
+                    .frame(width: imageSize.width, height: imageSize.height)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(info.modelName)
@@ -179,6 +181,14 @@ struct MacInfoCard: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(size.padding)
         .cardGlass(cornerRadius: size.cornerRadius)
+    }
+
+    private var imageSize: CGSize {
+        switch size {
+        case .small: CGSize(width: 76, height: 60)
+        case .medium: CGSize(width: 96, height: 76)
+        case .large: CGSize(width: 112, height: 88)
+        }
     }
 
     private func row(_ title: String, _ value: String) -> some View {
