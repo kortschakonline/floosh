@@ -509,19 +509,49 @@ final class SettingsWindowController {
             // sechs Tabs reichen 520 pt nicht mehr.
             let host = NSHostingView(rootView:
                 SettingsWindow(engine: engine, fixedHeight: false).frame(width: 620))
-            // Idealhöhe messen, solange die Hosting-View noch ihre volle
-            // Größe meldet …
-            let ideal = host.fittingSize.height
-            // … danach `.minSize`, damit das Fenster kleiner sein darf als der
-            // längste Tab — sonst reicht es über den Bildschirmrand hinaus.
+            // `.minSize`, damit das Fenster kleiner sein darf als der längste
+            // Tab — sonst reicht es über den Bildschirmrand hinaus. Die
+            // Höhe setzt `place(_:)` beim Öffnen.
             host.sizingOptions = [.minSize]
             w.contentView = host
-            let maxHeight = (NSScreen.screens.first?.visibleFrame.height ?? 900) - 60
-            w.setContentSize(NSSize(width: 620, height: min(max(ideal, 320), maxHeight)))
-            w.center()
+            w.setContentSize(NSSize(width: 620, height: 600))
             window = w
         }
+        if let window { place(window) }
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+    }
+
+    /// So hoch wie der Bildschirm (die Tabs sind lang — so muss kaum
+    /// gescrollt werden) und direkt neben dem offenen Dropdown, links davon,
+    /// wenn dort Platz ist, sonst rechts. Ohne Dropdown: mittig.
+    private func place(_ window: NSWindow) {
+        let menu = MenuBarController.shared
+        let anchor = menu?.isOpen == true ? menu?.panelFrame : nil
+        let screen = anchor.flatMap { a in NSScreen.screens.first { $0.frame.intersects(a) } }
+            ?? NSScreen.main ?? NSScreen.screens.first
+        guard let visible = screen?.visibleFrame else { return }
+
+        var frame = window.frame
+        let titleBar = frame.height - window.contentRect(forFrameRect: frame).height
+        frame.size.height = min(visible.height - 12, 1400 + titleBar)
+        frame.origin.y = visible.maxY - frame.height - 6
+
+        let gap: CGFloat = 10
+        if let anchor {
+            if anchor.minX - gap - frame.width >= visible.minX + 8 {
+                frame.origin.x = anchor.minX - gap - frame.width
+            } else if anchor.maxX + gap + frame.width <= visible.maxX - 8 {
+                frame.origin.x = anchor.maxX + gap
+            } else {
+                // Passt weder links noch rechts: an den freieren Rand
+                let leftRoom = anchor.minX - visible.minX
+                let rightRoom = visible.maxX - anchor.maxX
+                frame.origin.x = leftRoom > rightRoom ? visible.minX + 8 : visible.maxX - frame.width - 8
+            }
+        } else {
+            frame.origin.x = visible.midX - frame.width / 2
+        }
+        window.setFrame(frame, display: true)
     }
 }

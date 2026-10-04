@@ -30,6 +30,12 @@ enum DebugSnapshot {
             // und meldet die Fenster-ID für ein externes `screencapture`.
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(2))
+                // `--with-menu`: vorher das Dropdown öffnen — prüft, ob die
+                // Einstellungen daneben aufgehen
+                if CommandLine.arguments.contains("--with-menu") {
+                    MenuBarController.shared?.open()
+                    try? await Task.sleep(for: .seconds(1))
+                }
                 SettingsLauncher.open()
                 try? await Task.sleep(for: .seconds(2))
                 for window in NSApp.windows where window.isVisible && window.title == "floosh" {
