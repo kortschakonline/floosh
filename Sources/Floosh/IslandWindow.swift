@@ -62,7 +62,7 @@ final class IslandSettings {
 // MARK: - Zustand
 
 enum IslandTab: String, CaseIterable, Identifiable {
-    case live, shelf, music, battery, tools
+    case live, shelf, music, battery, menubar, tools
 
     var id: String { rawValue }
     var title: String {
@@ -71,6 +71,7 @@ enum IslandTab: String, CaseIterable, Identifiable {
         case .shelf: "Ablage"
         case .music: "Musik"
         case .battery: "Akku"
+        case .menubar: "Menüleiste"
         case .tools: "Werkzeuge"
         }
     }
@@ -80,6 +81,7 @@ enum IslandTab: String, CaseIterable, Identifiable {
         case .shelf: "tray"
         case .music: "music.note"
         case .battery: "battery.75percent"
+        case .menubar: "menubar.rectangle"
         case .tools: "wrench.and.screwdriver"
         }
     }
@@ -129,7 +131,7 @@ final class IslandModel {
             // Kopfzeile mit Tabs (~40) + Inhalt je Tab + Rand unten
             let content: CGFloat = switch tab {
             case .live: 78
-            case .tools: 104
+            case .tools, .menubar: 104
             case .shelf, .music, .battery: 124
             }
             return CGSize(width: 580, height: core.height + 40 + content + 24)

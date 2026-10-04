@@ -85,6 +85,7 @@ struct IslandView: View {
                     case .shelf: IslandShelfTab(shelf: .shared, isDropTarget: model.isDropTarget)
                     case .music: IslandMusicTab(player: .shared)
                     case .battery: IslandBatteryTab(engine: engine)
+                    case .menubar: IslandMenuBarTab(items: .shared)
                     case .tools: IslandToolsTab(engine: engine)
                     }
                 }
@@ -152,7 +153,13 @@ struct IslandView: View {
     }
 
     private var availableTabs: [IslandTab] {
-        IslandTab.allCases.filter { $0 != .battery || engine.battery != nil }
+        IslandTab.allCases.filter { tab in
+            switch tab {
+            case .battery: engine.battery != nil
+            case .menubar: MenuBarOrganizer.shared.isRunning && MenuBarOrganizer.shared.barMode
+            default: true
+            }
+        }
     }
 }
 
@@ -540,6 +547,46 @@ private struct IslandBatteryTab: View {
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .monospacedDigit()
         }
+    }
+}
+
+/// Versteckte Menüleisten-Symbole (Organizer Stufe 2) in der Island.
+private struct IslandMenuBarTab: View {
+    @Bindable var items: MenuBarItems
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if items.items.isEmpty {
+                Text(items.hasAllPermissions
+                     ? (items.isScanning ? "Symbole werden eingelesen …" : "Keine versteckten Symbole")
+                     : "floosh braucht Bedienungshilfen und Bildschirmaufnahme (Einstellungen → Menüleiste)")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 4) {
+                        ForEach(items.items) { item in
+                            MenuBarItemButton(item: item) {
+                                IslandController.shared.setMode(.idle)
+                                Task {
+                                    try? await Task.sleep(for: .milliseconds(120))
+                                    MenuBarItems.shared.press(item)
+                                }
+                            }
+                            .scaleEffect(1.25)
+                            .padding(.horizontal, 4)
+                        }
+                    }
+                    .padding(.vertical, 10)
+                }
+                .scrollIndicators(.never)
+                Text("Klick öffnet das Menü des Symbols · Anordnen: ⌘-Ziehen in der Menüleiste")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .task { await items.refreshIfNeeded() }
     }
 }
 

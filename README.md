@@ -99,6 +99,12 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   daneben, Escape oder erneutem Klick schließt. Auch das Einstellungsfenster
   gehört jetzt der App (`SettingsWindowController`) — `showSettingsWindow:`
   meldet in dieser Konstellation Erfolg, öffnet aber nichts.
+- Organizer Stufe 2 (`MenuBarItems.swift`, `HiddenItemsBar.swift`, 1.13):
+  Symbole anderer Apps über `AXExtrasMenuBar` (Lage, `AXPress`), eigene Trenner
+  per AX-Label gefunden (die Fensterlage der Status-Knöpfe stimmt unter macOS 27
+  nicht). Einlesen: still ausklappen, Menüleisten-Streifen per
+  `SCScreenshotManager` aufnehmen, Symbole ausschneiden, 2 min zwischenspeichern.
+  Leiste als `NSPanel` unter dem Pfeil, Island-Tab „Menüleiste".
 - Menüleisten-Organizer (`MenuBarOrganizer.swift`, 1.12): drei eigene
   `NSStatusItem`s (Pfeil, Trenner „versteckt", Trenner „immer versteckt"),
   angeordnet per ⌘-Ziehen, Positionen via `autosaveName`. Eingeklappt wird ein

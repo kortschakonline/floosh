@@ -575,13 +575,52 @@ private struct OrganizerSettingsTab: View {
                     .foregroundStyle(.secondary)
             }
             .disabled(!organizer.enabled)
-            Section("Bald") {
-                Text("Stufe 2: versteckte Symbole in einer eigenen Leiste unter der Menüleiste bzw. in der Island — wichtig auf MacBooks mit Notch, wo Symbole sonst hinter der Notch verschwinden. Dafür braucht floosh die Rechte „Bildschirmaufnahme\u{201C} und „Bedienungshilfen\u{201C}.")
+            Section("Versteckte Symbole als Leiste") {
+                Toggle("Statt Ausklappen eine Leiste unter der Menüleiste zeigen", isOn: $organizer.barMode)
+                Text("Ein Klick auf den Pfeil zeigt die versteckten Symbole in einer eigenen Leiste — die Menüleiste bleibt aufgeräumt, und auf MacBooks mit Notch verschwindet nichts dahinter. Klick auf ein Symbol öffnet sein Menü. Auch in der Island (Tab „Menüleiste\u{201C}).")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if organizer.barMode {
+                    PermissionRow(title: "Bedienungshilfen", detail: "Symbole finden und anklicken",
+                                  granted: MenuBarItems.shared.hasAccessibility,
+                                  pane: "Privacy_Accessibility")
+                    PermissionRow(title: "Bildschirmaufnahme", detail: "Aussehen der Symbole zeigen",
+                                  granted: MenuBarItems.shared.hasScreenCapture,
+                                  pane: "Privacy_ScreenCapture")
+                    Text("floosh ist nur ad-hoc signiert — nach einem Update verlangt macOS die Bedienungshilfen-Freigabe meist neu (in der Liste floosh einmal aus- und wieder einschalten).")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
+            .disabled(!organizer.enabled)
         }
         .formStyle(.grouped)
+    }
+}
+
+/// Eine Zeile pro Recht: Status und Weg in die Systemeinstellungen.
+private struct PermissionRow: View {
+    let title: String
+    let detail: String
+    let granted: Bool
+    let pane: String
+
+    var body: some View {
+        HStack {
+            Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(granted ? .green : .orange)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                Text(detail).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if !granted {
+                Button("Freigeben …") {
+                    MenuBarItems.shared.requestPermissions()
+                    MenuBarItems.shared.openPrivacySettings(pane)
+                }
+            }
+        }
     }
 }
 

@@ -38,6 +38,21 @@ final class MenuBarOrganizer {
     var hoverReveal: Bool {
         didSet { defaults.set(hoverReveal, forKey: "organizer.hover") }
     }
+    /// Stufe 2: Versteckte Symbole in einer eigenen Leiste unter der Menüleiste
+    /// zeigen, statt die Menüleiste auszuklappen (braucht Bedienungshilfen +
+    /// Bildschirmaufnahme).
+    var barMode: Bool {
+        didSet {
+            defaults.set(barMode, forKey: "organizer.barMode")
+            if barMode {
+                MenuBarItems.shared.requestPermissions()
+            } else {
+                HiddenItemsBar.shared.close()
+            }
+        }
+    }
+
+    var isRunning: Bool { toggle != nil }
 
     // MARK: Zustand
 
@@ -52,6 +67,11 @@ final class MenuBarOrganizer {
     private var hoverTask: Task<Void, Never>?
     private var monitors: [Any] = []
 
+    /// Namen der Trenner für die Bedienungshilfen — darüber findet Stufe 2
+    /// ihre Lage im selben Koordinatensystem wie alle anderen Symbole.
+    static let hiddenDividerLabel = "floosh-Trenner versteckt"
+    static let alwaysDividerLabel = "floosh-Trenner immer versteckt"
+
     /// So breit wird ein Trenner, um alles links von ihm hinauszuschieben.
     private static let hidingLength: CGFloat = 10_000
 
@@ -59,6 +79,12 @@ final class MenuBarOrganizer {
         enabled = defaults.object(forKey: "organizer.enabled") as? Bool ?? false
         autoHideDelay = defaults.object(forKey: "organizer.autoHide") as? Double ?? 10
         hoverReveal = defaults.object(forKey: "organizer.hover") as? Bool ?? true
+        barMode = defaults.object(forKey: "organizer.barMode") as? Bool ?? false
+    }
+
+    /// Leiste statt Ausklappen — nur, wenn die Rechte auch wirklich da sind.
+    private var usesBar: Bool {
+        barMode && MenuBarItems.shared.hasAllPermissions
     }
 
     // MARK: Start/Stopp
@@ -83,6 +109,7 @@ final class MenuBarOrganizer {
         hidden.button?.image = Self.dividerImage(dashed: false)
         hidden.button?.appearsDisabled = true
         hidden.button?.toolTip = "floosh: links von hier = versteckt (⌘-Ziehen zum Anordnen)"
+        hidden.button?.setAccessibilityLabel(Self.hiddenDividerLabel)
         self.hiddenDivider = hidden
 
         let always = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -90,6 +117,7 @@ final class MenuBarOrganizer {
         always.button?.image = Self.dividerImage(dashed: true)
         always.button?.appearsDisabled = true
         always.button?.toolTip = "floosh: links von hier = immer versteckt (nur per ⌥-Klick)"
+        always.button?.setAccessibilityLabel(Self.alwaysDividerLabel)
         self.alwaysDivider = always
 
         startMonitors()
@@ -131,19 +159,48 @@ final class MenuBarOrganizer {
         // Ohne Mausereignis (Bedienungshilfen/VoiceOver „Drücken"): wie Linksklick
         guard let event = NSApp.currentEvent,
               event.type == .leftMouseUp || event.type == .rightMouseUp else {
-            apply(expanded: !isExpanded, always: false)
+            if usesBar {
+                HiddenItemsBar.shared.toggle(includingAlwaysHidden: false)
+            } else {
+                if isExpanded { collapse() } else { expand() }
+            }
             return
         }
         if event.type == .rightMouseUp {
             showMenu()
             return
         }
+        if usesBar {
+            HiddenItemsBar.shared.toggle(includingAlwaysHidden: event.modifierFlags.contains(.option))
+            return
+        }
         if event.modifierFlags.contains(.option) {
             // ⌥-Klick: alles zeigen, auch „immer versteckt"
             apply(expanded: true, always: !showsAlwaysHidden)
         } else {
-            apply(expanded: !isExpanded, always: false)
+            if isExpanded { collapse() } else { expand() }
         }
+    }
+
+    /// Für Stufe 2: aus- bzw. einklappen, ohne Automatik und ohne die
+    /// Einklapp-Uhr zu starten (MenuBarItems liest dabei die Symbole ein).
+    func setExpandedQuietly(_ expanded: Bool, always: Bool) {
+        apply(expanded: expanded, always: always, quiet: true)
+    }
+
+    /// Wo die Bereiche beginnen (globale x-Koordinaten): links von
+    /// `hiddenStart` ist „versteckt", links von `alwaysStart` „immer versteckt".
+    /// Nur gültig, solange beide Trenner ausgeklappt sind.
+    func sectionBounds() -> (hiddenStart: CGFloat, alwaysStart: CGFloat)? {
+        guard isExpanded, showsAlwaysHidden,
+              let hidden = frame(of: hiddenDivider), let always = frame(of: alwaysDivider),
+              hidden.width < 200, always.width < 200 else { return nil }
+        return (hidden.minX, always.minX)
+    }
+
+    private func frame(of item: NSStatusItem?) -> NSRect? {
+        guard let button = item?.button, let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
     }
 
     func expand(includingAlwaysHidden: Bool = false) {
@@ -151,10 +208,56 @@ final class MenuBarOrganizer {
     }
 
     func collapse() {
+        // Sicherung: Liegt der Pfeil selbst im versteckten Bereich, würde er
+        // beim Einklappen mit verschwinden — dann käme man nicht mehr dran
+        if toggleIsInsideHiddenSection() {
+            warnToggleMisplaced()
+            return
+        }
         apply(expanded: false, always: false)
     }
 
-    private func apply(expanded: Bool, always: Bool) {
+    private var warnedMisplaced = false
+
+    /// Lage von Pfeil und Trenner über die Bedienungshilfen (dieselben
+    /// Koordinaten wie die Menüleiste). Ohne Recht: keine Prüfung.
+    private func toggleIsInsideHiddenSection() -> Bool {
+        guard isExpanded, AXIsProcessTrusted() else { return false }
+        let app = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        var bar: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(app, "AXExtrasMenuBar" as CFString, &bar) == .success,
+              let bar else { return false }
+        var children: CFTypeRef?
+        AXUIElementCopyAttributeValue(bar as! AXUIElement, kAXChildrenAttribute as CFString, &children)
+        var toggleX: CGFloat?
+        var dividerX: CGFloat?
+        for element in (children as? [AXUIElement]) ?? [] {
+            var desc: CFTypeRef?
+            AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &desc)
+            var pos: CFTypeRef?
+            AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &pos)
+            var point = CGPoint.zero
+            if let pos { AXValueGetValue(pos as! AXValue, .cgPoint, &point) }
+            let name = desc as? String ?? ""
+            if name == Self.hiddenDividerLabel { dividerX = point.x }
+            if name.contains("Symbole verstecken") || name.contains("Versteckte Symbole zeigen") { toggleX = point.x }
+        }
+        guard let toggleX, let dividerX else { return false }
+        return toggleX < dividerX
+    }
+
+    private func warnToggleMisplaced() {
+        guard !warnedMisplaced else { return }
+        warnedMisplaced = true
+        let alert = NSAlert()
+        alert.messageText = "Der Pfeil liegt im versteckten Bereich"
+        alert.informativeText = "Er würde beim Verstecken mit verschwinden. Halte ⌘ gedrückt und ziehe den Pfeil › rechts neben den Trenner │ — dann klappt floosh wieder ein."
+        alert.addButton(withTitle: "Verstanden")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+
+    private func apply(expanded: Bool, always: Bool, quiet: Bool = false) {
         // Platz bis zum linken Rand des Symbolbereichs messen, solange die
         // Trenner noch schmal und sichtbar sind
         let hiddenFill = fillLength(for: hiddenDivider)
@@ -174,7 +277,11 @@ final class MenuBarOrganizer {
         toggle?.button?.toolTip = expanded
             ? "Klicken: wieder verstecken"
             : "Klicken: versteckte Symbole zeigen · ⌥-Klick: auch „immer versteckt“"
-        scheduleCollapse()
+        if quiet {
+            collapseTask?.cancel()
+        } else {
+            scheduleCollapse()
+        }
     }
 
     /// Nach der eingestellten Zeit wieder einklappen — aber nicht, solange der
@@ -219,7 +326,11 @@ final class MenuBarOrganizer {
                 guard let self, !Task.isCancelled else { return }
                 self.hoverTask = nil
                 if self.toggleFrame()?.insetBy(dx: -4, dy: -4).contains(NSEvent.mouseLocation) == true {
-                    self.expand()
+                    if self.usesBar {
+                        HiddenItemsBar.shared.show(includingAlwaysHidden: false)
+                    } else {
+                        self.expand()
+                    }
                 }
             }
         } else if !inside {
@@ -243,9 +354,8 @@ final class MenuBarOrganizer {
         return fill > 20 ? fill : nil
     }
 
-    private func toggleFrame() -> NSRect? {
-        guard let button = toggle?.button, let window = button.window else { return nil }
-        return window.convertToScreen(button.convert(button.bounds, to: nil))
+    func toggleFrame() -> NSRect? {
+        frame(of: toggle)
     }
 
     private func pointerInMenuBar() -> Bool {
@@ -281,7 +391,7 @@ final class MenuBarOrganizer {
         toggle?.menu = nil
     }
 
-    @objc private func menuToggle() { apply(expanded: !isExpanded, always: false) }
+    @objc private func menuToggle() { if isExpanded { collapse() } else { expand() } }
     @objc private func menuShowAll() { apply(expanded: true, always: true) }
     @objc private func menuSettings() { SettingsLauncher.open() }
 
