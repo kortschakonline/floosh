@@ -255,7 +255,20 @@ struct DropdownView: View {
             .compatGlassButton()
             .help("floosh beenden")
         }
-        .padding(.horizontal, 2)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        // Verschwommene, dunkel getönte Leiste: Das Logo ist hell und die
+        // Knöpfe sind Glas — auf hellem Schreibtisch sonst kaum zu sehen
+        .background {
+            RoundedRectangle(cornerRadius: engine.cardSize.cornerRadius, style: .continuous)
+                .fill(.regularMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: engine.cardSize.cornerRadius, style: .continuous)
+                        .fill(.black.opacity(0.28))
+                }
+                .environment(\.colorScheme, .dark)
+        }
+        .environment(\.colorScheme, .dark)
     }
 
     /// Schmale Zeile, sobald auf GitHub eine neuere Version liegt.

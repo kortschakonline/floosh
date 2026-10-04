@@ -44,6 +44,29 @@ enum RealWindowShots {
                 try? await Task.sleep(for: .seconds(10))
                 controller.close()
                 return
+            case "island":
+                // `--shoot island [idle|peek|expanded|alert] [live|shelf|music|battery|tools]`
+                IslandController.shared.attach(engine: engine)
+                IslandController.shared.holdOpen = true
+                try? await Task.sleep(for: .seconds(3))
+                let mode = args.count > idx + 2 ? args[idx + 2] : "expanded"
+                if args.count > idx + 3, let tab = IslandTab(rawValue: args[idx + 3]) {
+                    IslandController.shared.model.tab = tab
+                }
+                switch mode {
+                case "idle": IslandController.shared.setMode(.idle)
+                case "peek": IslandController.shared.setMode(.peek)
+                case "alert":
+                    IslandController.shared.show(IslandAlert(symbol: "bolt.fill", color: .green,
+                                                             text: "Netzteil angeschlossen · 100 W"))
+                default: IslandController.shared.setMode(.expanded)
+                }
+                try? await Task.sleep(for: .seconds(1))
+                if let frame = IslandController.shared.panelFrame {
+                    announceRegion("ISLAND", frame: frame)
+                }
+                try? await Task.sleep(for: .seconds(8))
+                return
             case "catcher":
                 // Der Fangstreifen lässt sich nicht „von selbst" auslösen —
                 // hier wird er direkt gezeigt, um ihn ansehen zu können.

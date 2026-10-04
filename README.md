@@ -99,6 +99,15 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   daneben, Escape oder erneutem Klick schließt. Auch das Einstellungsfenster
   gehört jetzt der App (`SettingsWindowController`) — `showSettingsWindow:`
   meldet in dieser Konstellation Erfolg, öffnet aber nichts.
+- floosh-Island (`IslandWindow.swift`, `IslandView.swift`, `NowPlaying.swift`,
+  1.10): randloses `NSPanel` über der Menüleiste (Level `mainMenu + 3`), oben
+  mittig auf dem Bildschirm mit Notch (`auxiliaryTopLeft/RightArea`), sonst als
+  Pille in der Menüleiste. Das Fenster hat die Größe der aufgeklappten Island,
+  `ignoresMouseEvents` folgt der Zeigerposition (globale + lokale Monitore für
+  `mouseMoved` — ohne Sonderrechte). Zustände Ruhe / Vorschau / Hinweis / offen,
+  Datei-Drags über den `DragCatcher` (`islandListening`). Musik per AppleScript
+  an Music/Spotify, nur wenn sie laufen. Dev-Hook
+  `--shoot island [idle|peek|alert|expanded] [live|shelf|music|battery|tools]`.
 - Akku-Kachel (`BatterySampler.swift`, `BatteryCard.swift`, 1.9): nur mit Akku.
   Liest `AppleSmartBattery` aus der IORegistry ohne Root — Netzteil-Nennleistung
   (`AdapterDetails.Watts`), Systemverbrauch (`PowerTelemetryData.SystemLoad`),

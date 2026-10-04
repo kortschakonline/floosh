@@ -2,7 +2,7 @@ import SwiftUI
 import ServiceManagement
 
 enum SettingsTab: String, CaseIterable {
-    case display, measurement, fans, panel, tools, general
+    case display, measurement, fans, panel, island, tools, general
 }
 
 /// Eigenständiges Einstellungs-Fenster (⌘,) mit Tabs — hier ist Platz für mehr.
@@ -50,6 +50,9 @@ struct SettingsWindow: View {
                 Tab("Panel", systemImage: "rectangle.on.rectangle", value: .panel) {
                     PanelSettingsTab(panel: PanelSettings.shared)
                 }
+                Tab("Island", systemImage: "capsule.tophalf.filled", value: .island) {
+                    IslandSettingsTab(settings: IslandSettings.shared)
+                }
                 Tab("Werkzeuge", systemImage: "wrench.and.screwdriver", value: .tools) {
                     ToolsSettingsTab()
                 }
@@ -71,6 +74,9 @@ struct SettingsWindow: View {
                 PanelSettingsTab(panel: PanelSettings.shared)
                     .tabItem { Label("Panel", systemImage: "rectangle.on.rectangle") }
                     .tag(SettingsTab.panel)
+                IslandSettingsTab(settings: IslandSettings.shared)
+                    .tabItem { Label("Island", systemImage: "capsule.tophalf.filled") }
+                    .tag(SettingsTab.island)
                 ToolsSettingsTab()
                     .tabItem { Label("Werkzeuge", systemImage: "wrench.and.screwdriver") }
                     .tag(SettingsTab.tools)
@@ -456,6 +462,48 @@ private struct PanelSettingsTab: View {
                 ForEach(PanelSettings.Card.allCases.filter { $0 != .battery || StatsEngine.shared.battery != nil }) { card in
                     Toggle(card.title, isOn: panel.binding(for: card))
                 }
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+/// Island-Tab: an/aus, Pille ohne Notch, Werte in Ruhe, Verhalten.
+private struct IslandSettingsTab: View {
+    @Bindable var settings: IslandSettings
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("floosh-Island anzeigen", isOn: $settings.enabled)
+                    .featureGated(.island)
+                Toggle("Auf Bildschirmen ohne Notch als Pille in der Menüleiste", isOn: $settings.showWithoutNotch)
+                    .disabled(!settings.enabled)
+                Text("Auf MacBooks mit Notch wächst die Island aus der Notch heraus. Am Mac mini oder an externen Monitoren erscheint sie als kleine Pille mitten in der Menüleiste.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("In Ruhe") {
+                Picker("Links", selection: $settings.left) {
+                    ForEach(IslandValue.allCases) { Text($0.title).tag($0) }
+                }
+                Picker("Rechts", selection: $settings.right) {
+                    ForEach(IslandValue.allCases) { Text($0.title).tag($0) }
+                }
+            }
+            .disabled(!settings.enabled)
+            Section("Verhalten") {
+                Toggle("Beim Darüberfahren Vorschau zeigen", isOn: $settings.hoverPeek)
+                Toggle("Kurze Hinweise (Laufwerk angeschlossen, Netzteil, Akku niedrig)", isOn: $settings.alerts)
+                Text("Klick öffnet die Island ganz: Live-Werte, Ablage, Musik, Akku und Werkzeuge. Werden irgendwo Dateien gezogen, klappt sie als Ablage auf. Klick daneben schließt sie.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .disabled(!settings.enabled)
+            Section("Musik") {
+                Text("Zeigt und steuert, was in Apple Music oder Spotify läuft. macOS fragt beim ersten Mal nach der Erlaubnis (Automation). Wiedergabe im Browser kann macOS fremden Apps seit macOS 15.4 nicht mehr zeigen.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

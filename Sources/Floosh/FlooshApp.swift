@@ -36,8 +36,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard !DebugSnapshot.isActive, !DebugSnapshot.shootRequested else { return }
             MenuBarController.start(engine: .shared)
             // Erzeugt den Wächter; er startet seine Schleife nur, wenn der
-            // Fangstreifen eingeschaltet ist.
+            // Fangstreifen oder die Island Datei-Drags sehen wollen.
             _ = DragCatcher.shared
+            IslandController.shared.attach(engine: .shared)
         }
     }
 

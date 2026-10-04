@@ -93,6 +93,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 	<string>${BUILD}</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>floosh zeigt in der Island, was in Musik oder Spotify läuft, und steuert die Wiedergabe.</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHighResolutionCapable</key>

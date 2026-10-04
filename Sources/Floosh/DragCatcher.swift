@@ -39,8 +39,17 @@ final class DragCatcher {
     var enabled: Bool {
         didSet {
             defaults.set(enabled, forKey: "catcher.enabled")
-            if enabled { start() } else { stop() }
+            updateLoop()
         }
+    }
+    /// Die floosh-Island will ebenfalls wissen, wann Dateien gezogen werden
+    /// (sie klappt dann als Ablage auf) — auch ohne Fangstreifen.
+    var islandListening = false {
+        didSet { updateLoop() }
+    }
+
+    private func updateLoop() {
+        if enabled || islandListening { start() } else { stop() }
     }
     var edge: Edge {
         didSet { defaults.set(edge.rawValue, forKey: "catcher.edge") }
@@ -109,6 +118,8 @@ final class DragCatcher {
     private func setDragging(_ value: Bool) {
         guard isDragging != value else { return }
         isDragging = value
+        if islandListening { IslandController.shared.dragChanged(value) }
+        guard enabled else { return }
         if value {
             hideTask?.cancel()
             DragCatcherWindow.shared.show(edge: edge)
