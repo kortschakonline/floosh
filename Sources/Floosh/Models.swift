@@ -128,6 +128,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
     case network = "netzwerk"
     case shelf
     case shortcuts
+    case battery
 
     var id: String { rawValue }
 
@@ -139,6 +140,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
         case .network: SpeedGroup.network.title
         case .shelf: "Ablage"
         case .shortcuts: "Kurzbefehle"
+        case .battery: "Akku"
         }
     }
 
@@ -151,6 +153,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
         case .network: SpeedGroup.network.symbol
         case .shelf: "tray"
         case .shortcuts: "square.stack.3d.up"
+        case .battery: "battery.75percent"
         }
     }
 

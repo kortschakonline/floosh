@@ -99,6 +99,13 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   daneben, Escape oder erneutem Klick schließt. Auch das Einstellungsfenster
   gehört jetzt der App (`SettingsWindowController`) — `showSettingsWindow:`
   meldet in dieser Konstellation Erfolg, öffnet aber nichts.
+- Akku-Kachel (`BatterySampler.swift`, `BatteryCard.swift`, 1.9): nur mit Akku.
+  Liest `AppleSmartBattery` aus der IORegistry ohne Root — Netzteil-Nennleistung
+  (`AdapterDetails.Watts`), Systemverbrauch (`PowerTelemetryData.SystemLoad`),
+  Leistung in den Akku (`InstantAmperage` × `Voltage`), Zeiten, Zyklen; Zustand =
+  `NominalChargeCapacity` / `DesignCapacity` (seit macOS 27 nur noch unter
+  `BatteryData`). Farbe/Schimmer nach Ladetempo, Klartext-Hinweis bei langsamem
+  Laden. `--demo-battery slow|fast|battery` zeigt erfundene Zustände für Bilder.
 - Fenster frei (1.8): verschiebbar am floosh-Schriftzug (`WindowDragHandle`,
   `performDrag`; Doppelklick dockt wieder an — losgelöst schließt es nicht beim
   Klick daneben), 1–3 Spalten per Knopf im Kopf, Eck-Griffe oder Fensterrand

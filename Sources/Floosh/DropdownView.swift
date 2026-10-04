@@ -87,6 +87,7 @@ struct DropdownView: View {
         if ShortcutsService.shared.showInDropdown, Entitlements.shared.isUnlocked(.shortcuts) {
             cards.insert(.shortcuts)
         }
+        if engine.battery != nil { cards.insert(.battery) }
         return engine.shownInDropdown(cards)
     }
 
@@ -95,6 +96,7 @@ struct DropdownView: View {
         var cards: Set<DashboardCard> = [.system, .internalDrives, .externalDrives, .network]
         if shelf.showInDropdown { cards.insert(.shelf) }
         if ShortcutsService.shared.showInDropdown { cards.insert(.shortcuts) }
+        if engine.battery != nil { cards.insert(.battery) }
         return engine.ordered(cards).filter(engine.hiddenCards.contains)
     }
 
@@ -307,6 +309,7 @@ struct DashboardCardView: View {
         case .network: GroupCard(engine: engine, group: .network, compact: compact)
         case .shelf: ShelfCard(engine: engine, shelf: shelf)
         case .shortcuts: ShortcutsCard(engine: engine, shortcuts: .shared)
+        case .battery: BatteryCard(engine: engine)
         }
     }
 }

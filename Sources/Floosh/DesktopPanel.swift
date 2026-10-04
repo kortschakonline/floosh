@@ -92,7 +92,8 @@ struct DesktopPanelView: View {
 
     var body: some View {
         let size = engine.cardSize
-        let cards = settings.orderedCards
+        // Ohne Akku (Mac mini & Co.) gibt es keine Akku-Karte
+        let cards = settings.orderedCards.filter { $0 != .battery || engine.battery != nil }
         let grid = settings.layout == .grid
         CompatGlassContainer(spacing: size.outerSpacing) {
             VStack(spacing: size.outerSpacing) {

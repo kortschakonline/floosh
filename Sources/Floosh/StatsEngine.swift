@@ -30,6 +30,8 @@ final class StatsEngine {
     private(set) var system = SystemSampler.Reading(cpuUsage: nil, gpuUsage: nil,
                                                     cpuTemp: nil, gpuTemp: nil, fans: [])
     var chipName: String { systemSampler.chipName }
+    /// Akku — `nil` auf Macs ohne Akku (dann gibt es auch keine Akku-Kachel).
+    private(set) var battery: BatterySampler.Reading?
 
     func state(for group: SpeedGroup) -> GroupState {
         groups[group] ?? GroupState()
@@ -205,6 +207,33 @@ final class StatsEngine {
     private var loop: Task<Void, Never>?
     private let maxHistory: TimeInterval = 200 // Sekunden Verlauf im Speicher
     private let systemSampler = SystemSampler()
+    private let batterySampler = BatterySampler()
+    /// Einmal ohne Akku gefunden → nicht weiter nachsehen.
+    private var batteryProbed = false
+
+    /// Dev-Hook für README-Bilder und Prüfungen: `--demo-battery slow|fast|battery`
+    /// zeigt einen erfundenen Akku-Zustand statt des echten.
+    private static let demoBattery: BatterySampler.Reading? = {
+        let args = CommandLine.arguments
+        guard let i = args.firstIndex(of: "--demo-battery"), args.count > i + 1 else { return nil }
+        var r = BatterySampler.Reading(percent: 47, isCharging: true, isPluggedIn: true, isFull: false,
+                                       batteryWatts: 6.2, adapterWatts: 45, adapterName: nil,
+                                       systemInWatts: 24, systemLoadWatts: 17.8,
+                                       minutesToFull: 214, minutesToEmpty: nil, health: 0.9,
+                                       cycleCount: 120, remainingMAh: 2490, fullMAh: 5295,
+                                       amperage: 520, notChargingReason: 0, slowChargingReason: 0)
+        switch args[i + 1] {
+        case "fast":
+            r.adapterWatts = 140; r.systemInWatts = 78; r.systemLoadWatts = 14; r.batteryWatts = 62
+            r.amperage = 5100; r.minutesToFull = 48
+        case "battery":
+            r.isCharging = false; r.isPluggedIn = false; r.adapterWatts = nil; r.systemInWatts = nil
+            r.batteryWatts = -9.4; r.amperage = -730; r.minutesToEmpty = 312; r.minutesToFull = nil
+        default:
+            break
+        }
+        return r
+    }()
 
     init() {
         selectedGroup = SpeedGroup(rawValue: defaults.string(forKey: "ds.group") ?? "") ?? .internalDrives
@@ -300,6 +329,12 @@ final class StatsEngine {
         let disks = DiskSampler.sample()
         let nets = NetSampler.sample()
         system = systemSampler.sample()
+        if !batteryProbed || battery != nil {
+            let reading = Self.demoBattery ?? batterySampler.sample()
+            batteryProbed = true
+            // Nur bei Änderung zuweisen — sonst zeichnet jede Runde alles neu
+            if reading != battery { battery = reading }
+        }
         FanService.shared.curveTick(cpuTemp: system.cpuTemp, gpuTemp: system.gpuTemp)
 
         defer { lastTickUptime = now }

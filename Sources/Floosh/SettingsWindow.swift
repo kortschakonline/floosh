@@ -453,7 +453,7 @@ private struct PanelSettingsTab: View {
             }
 
             Section("Karten") {
-                ForEach(PanelSettings.Card.allCases) { card in
+                ForEach(PanelSettings.Card.allCases.filter { $0 != .battery || StatsEngine.shared.battery != nil }) { card in
                     Toggle(card.title, isOn: panel.binding(for: card))
                 }
             }
