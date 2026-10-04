@@ -235,6 +235,13 @@ unter Actions → Release → „Run workflow" starten. Der Workflow baut auf ei
 macOS-Runner und veröffentlicht die Version aus `VERSION`. Alternativ startet
 ihn ein gepushter Tag `v<version>`.
 
+Signieren mit Developer ID und Beglaubigung durch Apple schalten sich ein,
+sobald diese Repository-Secrets hinterlegt sind: `DEVELOPER_ID_P12` (Zertifikat
+„Developer ID Application" als .p12, base64), `DEVELOPER_ID_P12_PASSWORD`,
+`NOTARY_APPLE_ID`, `NOTARY_PASSWORD` (App-spezifisches Passwort) und
+`NOTARY_TEAM_ID`. Ohne Secrets wird wie bisher ad hoc signiert. Lokal geht
+dasselbe mit `SIGN_IDENTITY="Developer ID Application: …" ./Tools/release.sh`.
+
 Mindestsystem: macOS 14 (Sonoma), Universal Binary (Apple Silicon + Intel).
 Liquid Glass gibt es ab macOS 26 — davor rendert dieselbe App eine
 Material-Optik (`GlassCompat.swift`). Kein Sandbox-Entitlement nötig.

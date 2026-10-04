@@ -51,7 +51,52 @@ jobs:
           xcodebuild -version
           swift --version
 
+      # Developer ID aus den Repository-Secrets in einen eigenen Schlüsselbund
+      # laden. Fehlen die Secrets, baut der Workflow wie bisher ad hoc signiert.
+      #   DEVELOPER_ID_P12           Zertifikat „Developer ID Application“ als .p12, base64
+      #   DEVELOPER_ID_P12_PASSWORD  Passwort der .p12
+      #   NOTARY_APPLE_ID            Apple-ID für die Beglaubigung
+      #   NOTARY_PASSWORD            App-spezifisches Passwort dieser Apple-ID
+      #   NOTARY_TEAM_ID             Team-ID (10 Zeichen, developer.apple.com → Membership)
+      - name: Signatur einrichten
+        id: signing
+        env:
+          P12: ${{ secrets.DEVELOPER_ID_P12 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          if [[ -z "$P12" ]]; then
+            echo "::notice::Keine Developer ID hinterlegt — Build wird ad hoc signiert"
+            exit 0
+          fi
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          printf '%s' "$P12" | base64 --decode > "$RUNNER_TEMP/developer-id.p12"
+          security import "$RUNNER_TEMP/developer-id.p12" -k "$KEYCHAIN" \
+            -P "$P12_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/developer-id.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN" \
+            $(security list-keychains -d user | tr -d '"')
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | grep -o '"Developer ID Application:[^"]*"' | head -1 | tr -d '"')
+          if [[ -z "$IDENTITY" ]]; then
+            echo "::error::Kein Zertifikat „Developer ID Application“ in DEVELOPER_ID_P12"
+            exit 1
+          fi
+          echo "Signiere mit: $IDENTITY"
+          echo "identity=$IDENTITY" >> "$GITHUB_OUTPUT"
+          echo "keychain=$KEYCHAIN" >> "$GITHUB_OUTPUT"
+
       - name: DMG bauen
+        env:
+          SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
         run: ./Tools/make-dmg.sh
 
       - name: Release veröffentlichen
@@ -73,3 +118,7 @@ jobs:
             --target "$GITHUB_SHA" "${NOTES_ARGS[@]}"
           echo "### ✓ floosh $VERSION veröffentlicht" >> "$GITHUB_STEP_SUMMARY"
           gh release view "$TAG" --json url --jq .url >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Schlüsselbund entfernen
+        if: always() && steps.signing.outputs.keychain != ''
+        run: security delete-keychain "${{ steps.signing.outputs.keychain }}" || true
