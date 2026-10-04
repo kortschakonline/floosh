@@ -230,6 +230,11 @@ mit dem DMG als Asset an (Notizen aus `docs/releases/<version>.md`, sonst
 generiert; `--notes "…"` bzw. `--dry-run` möglich). Der Update-Check der App
 erkennt genau diese Releases.
 
+Ohne Mac geht dasselbe über GitHub Actions (`.github/workflows/release.yml`):
+unter Actions → Release → „Run workflow" starten. Der Workflow baut auf einem
+macOS-Runner und veröffentlicht die Version aus `VERSION`. Alternativ startet
+ihn ein gepushter Tag `v<version>`.
+
 Mindestsystem: macOS 14 (Sonoma), Universal Binary (Apple Silicon + Intel).
 Liquid Glass gibt es ab macOS 26 — davor rendert dieselbe App eine
 Material-Optik (`GlassCompat.swift`). Kein Sandbox-Entitlement nötig.

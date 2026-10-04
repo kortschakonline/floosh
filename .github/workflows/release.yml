@@ -1,0 +1,75 @@
+# Baut floosh auf einem macOS-Runner und veröffentlicht das GitHub-Release
+# mit DMG — dasselbe wie Tools/release.sh, nur ohne eigenen Mac.
+#
+#   Manuell:  Actions → Release → „Run workflow" (veröffentlicht die Version
+#             aus VERSION und setzt den Tag selbst)
+#   Per Tag:  git tag -a v1.2.3 -m "floosh 1.2.3" && git push origin v1.2.3
+#             (Tag muss zu VERSION passen)
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Build-Nummer = Anzahl Commits (bundle-app.sh) — volle History nötig
+          fetch-depth: 0
+
+      - name: Version prüfen
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(tr -d '[:space:]' < VERSION)
+          TAG="v$VERSION"
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "$TAG" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME passt nicht zu VERSION ($VERSION)"
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::Release $TAG existiert bereits — VERSION erhöhen"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Xcode
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: DMG bauen
+        run: ./Tools/make-dmg.sh
+
+      - name: Release veröffentlichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          DMG="build/floosh-$VERSION.dmg"
+          NOTES="docs/releases/$VERSION.md"
+          [[ -f "$DMG" ]] || { echo "::error::$DMG fehlt"; exit 1; }
+          if [[ -f "$NOTES" ]]; then
+            NOTES_ARGS=(--notes-file "$NOTES")
+          else
+            NOTES_ARGS=(--generate-notes)
+          fi
+          # Ohne vorhandenen Tag legt gh ihn auf dem gebauten Commit an
+          gh release create "$TAG" "$DMG" --title "floosh $VERSION" \
+            --target "$GITHUB_SHA" "${NOTES_ARGS[@]}"
+          echo "### ✓ floosh $VERSION veröffentlicht" >> "$GITHUB_STEP_SUMMARY"
+          gh release view "$TAG" --json url --jq .url >> "$GITHUB_STEP_SUMMARY"
