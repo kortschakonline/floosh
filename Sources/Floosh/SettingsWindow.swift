@@ -171,7 +171,35 @@ struct SettingsWindow: View {
 
             Section("Reihenfolge der Kacheln") {
                 CardOrderEditor(engine: engine)
-                Text("Gilt für Dropdown und Desktop-Panel. Welche Kacheln überhaupt erscheinen, steht oben bzw. im Tab „Panel\u{201C}.")
+                Text("Gilt für Dropdown und Desktop-Panel. Schneller geht's im Dropdown selbst: Knopf \u{201E}Anordnen\u{201C} (Raster-Symbol), dann Kacheln ziehen oder ausblenden.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Toggle("Extern ausblenden, wenn kein Laufwerk dran ist", isOn: $engine.hideEmptyExternal)
+                if !engine.hiddenCards.isEmpty {
+                    Button("Ausgeblendete Kacheln wieder zeigen (\(engine.hiddenCards.count))") {
+                        engine.hiddenCards = []
+                    }
+                }
+            }
+
+            Section("Fenster") {
+                Picker("Spalten", selection: Binding(
+                    get: { engine.customWidth == nil ? 0 : engine.chosenColumns },
+                    set: { n in
+                        engine.fitColumns = nil
+                        engine.customWidth = n == 0 ? nil : engine.width(forColumns: n)
+                    })) {
+                    Text("Nach Anordnung").tag(0)
+                    Text("1").tag(1)
+                    Text("2").tag(2)
+                    Text("3").tag(3)
+                }
+                Toggle("Automatisch mehr Spalten, wenn der Bildschirm zu niedrig ist",
+                       isOn: $engine.autoFitColumns)
+                Button("Größe und Position zurücksetzen") {
+                    MenuBarController.shared?.resetWindowGeometry()
+                }
+                Text("Spalten auch direkt im Dropdown: Knopf im Kopf oder an den Griffen in den unteren Ecken seitlich ziehen. Verschieben am floosh-Schriftzug, Doppelklick darauf dockt wieder unter dem Symbol an. Die automatische Anpassung vermeidet Scrollen — auf dem MacBook-Bildschirm etwa zwei statt einer Spalte.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

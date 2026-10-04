@@ -9,6 +9,14 @@ struct DropdownView: View {
     var panel: PanelSettings = .shared
     var shelf: FileShelf = .shared
 
+    /// Anordnen-Modus: Kacheln ziehen und ausblenden. Solange er an ist,
+    /// reagieren die Kacheln selbst nicht auf Klicks — so kommen sich Ziehen,
+    /// Lüfter-Regler und Ablage-Drags nicht in die Quere.
+    /// `--arrange` (Dev-Hook für Bildprüfungen) startet direkt im Anordnen-Modus.
+    @State private var arranging = CommandLine.arguments.contains("--arrange")
+    /// Kachel, über der gerade eine andere schwebt (Einfügemarke).
+    @State private var dropTarget: DashboardCard?
+
     var body: some View {
         let size = engine.cardSize
         CompatGlassContainer(spacing: size.outerSpacing) {
@@ -29,9 +37,8 @@ struct DropdownView: View {
         }
     }
 
-    /// Kein ScrollView: Das Fenster von `MenuBarExtra` fragt nur die Idealgröße
-    /// des Inhalts ab — ein ScrollView meldet dort keine und das Fenster
-    /// schrumpft auf einen Strich zusammen.
+    /// Kein ScrollView hier drin: Gescrollt wird außen im Menüleisten-Fenster
+    /// (`MenuPanelContent`), das die Idealgröße dieses Views misst.
     private func content(size: CardSize) -> some View {
         VStack(spacing: size.outerSpacing) {
             header
@@ -40,17 +47,29 @@ struct DropdownView: View {
                 updateBanner(release)
             }
 
-            let rows = DashboardCard.rows(visibleCards, layout: engine.layout)
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                if row.count == 1 {
+            let columns = engine.freeColumns
+            let rows = DashboardCard.rows(visibleCards, layout: engine.layout, columns: columns)
+            ForEach(rows, id: \.self) { row in
+                if row.count == 1, (columns ?? 1) == 1 {
                     card(row[0])
                 } else {
                     HStack(alignment: .top, spacing: size.outerSpacing) {
-                        ForEach(row) { card($0, compact: engine.layout == .split) }
+                        ForEach(row) { card($0, compact: columns == nil && engine.layout == .split) }
+                        // Letzte Zeile nicht voll: Lücken füllen, damit die
+                        // Kacheln ihre Spaltenbreite behalten
+                        if let columns, row.count < columns {
+                            ForEach(0..<(columns - row.count), id: \.self) { _ in
+                                Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
+                            }
+                        }
                     }
-                    // Beide Karten der Zeile bekommen dieselbe Höhe
+                    // Alle Karten der Zeile bekommen dieselbe Höhe
                     .fixedSize(horizontal: false, vertical: true)
                 }
+            }
+
+            if arranging {
+                arrangeBar
             }
 
             footer
@@ -68,17 +87,141 @@ struct DropdownView: View {
         if ShortcutsService.shared.showInDropdown, Entitlements.shared.isUnlocked(.shortcuts) {
             cards.insert(.shortcuts)
         }
-        return engine.ordered(cards)
+        return engine.shownInDropdown(cards)
     }
 
+    /// Ausgeblendete Kacheln, die man im Anordnen-Modus zurückholen kann.
+    private var hiddenAvailableCards: [DashboardCard] {
+        var cards: Set<DashboardCard> = [.system, .internalDrives, .externalDrives, .network]
+        if shelf.showInDropdown { cards.insert(.shelf) }
+        if ShortcutsService.shared.showInDropdown { cards.insert(.shortcuts) }
+        return engine.ordered(cards).filter(engine.hiddenCards.contains)
+    }
+
+    @ViewBuilder
     private func card(_ card: DashboardCard, compact: Bool = false) -> some View {
-        DashboardCardView(card: card, engine: engine, fans: fans, shelf: shelf, compact: compact)
+        let view = DashboardCardView(card: card, engine: engine, fans: fans, shelf: shelf, compact: compact)
+        if arranging {
+            ArrangeableCard(card: card, size: engine.cardSize,
+                            isDropTarget: dropTarget == card) {
+                view
+            } onHide: {
+                withAnimation(.snappy) { _ = engine.hiddenCards.insert(card) }
+            }
+            .draggable(CardDrag.token(for: card)) {
+                ArrangeDragPreview(card: card)
+            }
+            .dropDestination(for: String.self) { items, _ in
+                guard let moved = items.lazy.compactMap(CardDrag.card(from:)).first else { return false }
+                withAnimation(.snappy) { engine.moveCard(moved, before: card) }
+                return true
+            } isTargeted: { targeted in
+                if targeted { dropTarget = card } else if dropTarget == card { dropTarget = nil }
+            }
+        } else {
+            view
+        }
+    }
+
+    private var currentColumns: Int {
+        engine.freeColumns ?? engine.chosenColumns
+    }
+
+    private var columnSymbol: String {
+        switch currentColumns {
+        case 1: "rectangle"
+        case 2: "rectangle.split.2x1"
+        default: "rectangle.split.3x1"
+        }
+    }
+
+    /// Unter den Kacheln im Anordnen-Modus: Ablage-Ziel „ans Ende",
+    /// ausgeblendete Kacheln zum Zurückholen und „Fertig".
+    private var arrangeBar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Kacheln ziehen zum Umsortieren · hier ablegen = ans Ende")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
+            if !hiddenAvailableCards.isEmpty {
+                HStack(spacing: 6) {
+                    Text("Ausgeblendet:")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    ForEach(hiddenAvailableCards) { card in
+                        Button {
+                            withAnimation(.snappy) { _ = engine.hiddenCards.remove(card) }
+                        } label: {
+                            Label(card.title, systemImage: "plus")
+                                .font(.caption)
+                        }
+                        .compatGlassButton()
+                        .controlSize(.small)
+                        .help("\(card.title) wieder einblenden")
+                    }
+                }
+            }
+
+            HStack {
+                Toggle("Extern ausblenden, wenn kein Laufwerk dran ist",
+                       isOn: $engine.hideEmptyExternal)
+                    .toggleStyle(.checkbox)
+                    .font(.caption)
+                Spacer(minLength: 8)
+                Button("Fertig") {
+                    withAnimation(.snappy) { arranging = false }
+                }
+                .compatGlassButton()
+                .controlSize(.small)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardGlass(cornerRadius: engine.cardSize.cornerRadius)
+        .dropDestination(for: String.self) { items, _ in
+            guard let moved = items.lazy.compactMap(CardDrag.card(from:)).first else { return false }
+            withAnimation(.snappy) { engine.moveCard(moved, before: nil) }
+            return true
+        }
     }
 
     private var header: some View {
         HStack(spacing: 8) {
+            // Griff zum Verschieben des Fensters; Doppelklick dockt wieder an
             FlooshWordmark(height: 24)
+                .padding(.vertical, 4)
+                .padding(.trailing, 24)
+                .background {
+                    WindowDragHandle {
+                        MenuBarController.shared?.panelWasMoved()
+                    } onDoubleClick: {
+                        MenuBarController.shared?.redock()
+                    }
+                }
+                .help("Ziehen zum Verschieben · Doppelklick: wieder unter dem Symbol andocken")
             Spacer()
+
+            Button {
+                withAnimation(.snappy) { engine.cycleColumns() }
+            } label: {
+                Image(systemName: columnSymbol)
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 16, height: 16)
+            }
+            .compatGlassButton()
+            .help("Spalten: \(currentColumns) — klicken für \(currentColumns % 3 + 1)")
+
+            Button {
+                withAnimation(.snappy) { arranging.toggle() }
+            } label: {
+                Image(systemName: arranging ? "checkmark" : "square.grid.2x2")
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 16, height: 16)
+            }
+            .compatGlassButton()
+            .help(arranging ? "Anordnen beenden" : "Kacheln anordnen und ausblenden")
+
             Button {
                 panel.enabled.toggle()
             } label: {

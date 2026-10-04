@@ -25,6 +25,20 @@ final class MenuBarController: NSObject {
     /// wenn der Drag woanders endet.
     private var openedForDrag = false
 
+    /// Losgelöstes Fenster: obere linke Ecke, wohin es gezogen wurde. Dann
+    /// bleibt es dort und schließt nicht beim Klick daneben. `nil` = angedockt.
+    private var detachedTopLeft: NSPoint? {
+        didSet {
+            if let p = detachedTopLeft {
+                UserDefaults.standard.set([Double(p.x), Double(p.y)], forKey: "menu.topLeft")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "menu.topLeft")
+            }
+        }
+    }
+    /// Breite zu Beginn eines Zugs an einem Eck-Griff.
+    private var gripStartWidth: CGFloat = 0
+
     @discardableResult
     static func start(engine: StatsEngine) -> MenuBarController {
         if let shared { return shared }
@@ -38,6 +52,12 @@ final class MenuBarController: NSObject {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
         statusItem.autosaveName = "digital.jrn.floosh.status"
+        let defaults = UserDefaults.standard
+        if let p = defaults.array(forKey: "menu.topLeft") as? [Double], p.count == 2 {
+            detachedTopLeft = NSPoint(x: p[0], y: p[1])
+        }
+        // Bis 1.8.0-Testbau gab es eine gezogene Höhe — sie schnitt Kacheln ab
+        defaults.removeObject(forKey: "menu.height")
         configureButton()
         observeLabel()
     }
@@ -93,7 +113,8 @@ final class MenuBarController: NSObject {
         closeTask?.cancel()
         openedForDrag = false
         let panel = panel ?? makePanel()
-        position(panel)
+        engine.fitColumns = nil // bei jedem Öffnen neu ermitteln
+        applyContentSize(measureContent(), to: panel)
         panel.makeKeyAndOrderFront(nil)
         statusItem.button?.highlight(true)
         startMonitors()
@@ -106,7 +127,7 @@ final class MenuBarController: NSObject {
         guard !isOpen else { return }
         openedForDrag = true
         let panel = panel ?? makePanel()
-        position(panel)
+        applyContentSize(measureContent(), to: panel)
         panel.orderFrontRegardless()
         statusItem.button?.highlight(true)
     }
@@ -160,7 +181,7 @@ final class MenuBarController: NSObject {
 
     private func makePanel() -> NSPanel {
         let panel = NSPanel(contentRect: .zero,
-                            styleMask: [.borderless, .nonactivatingPanel],
+                            styleMask: [.borderless, .nonactivatingPanel, .resizable],
                             backing: .buffered, defer: false)
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -169,37 +190,146 @@ final class MenuBarController: NSObject {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
-        panel.isMovable = false
+        // Verschoben wird nur über den Griff im Kopf (`WindowDragHandle`)
+        panel.isMovable = true
+        panel.isMovableByWindowBackground = false
         panel.animationBehavior = .utilityWindow
+        panel.delegate = self
 
-        let host = NSHostingController(rootView: DropdownView(engine: engine))
-        host.sizingOptions = [.preferredContentSize]
+        // Die Fenstergröße setzt der Controller selbst (`applyContentSize`),
+        // nicht SwiftUI über `.preferredContentSize`: Diese Rückkopplung
+        // (Fenstergröße → Layout → Fenstergröße) blieb unter macOS 27.2 Beta
+        // in einer Endlosschleife hängen, das Fenster erschien nie.
+        // Gemessen wird der Inhalt im ScrollView, also unabhängig von der
+        // Fenstergröße — damit kann sich nichts mehr aufschaukeln.
+        let host = NSHostingController(rootView: MenuPanelContent(engine: engine) { [weak self] size in
+            guard let self, let panel = self.panel else { return }
+            self.applyContentSize(size, to: panel)
+        })
+        host.sizingOptions = []
         panel.contentViewController = host
-        panel.setContentSize(host.view.fittingSize)
-
-        // Inhalt wächst und schrumpft (Geräteliste, Ablage) — dann neu ausrichten
-        NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification,
-                                               object: panel, queue: .main) { [weak self] _ in
-            Task { @MainActor in
-                guard let self, let panel = self.panel else { return }
-                self.position(panel)
-            }
-        }
         self.panel = panel
         return panel
+    }
+
+    /// Idealgröße des Inhalts, gemessen ohne Fenster — für den ersten Auftritt,
+    /// bevor das Fenster selbst eine Messung melden kann.
+    private func measureContent() -> CGSize {
+        NSHostingView(rootView: DropdownView(engine: engine)).fittingSize
+    }
+
+    /// Fenster auf die Inhaltsgröße bringen, höchstens so hoch wie der
+    /// Bildschirm unter der Menüleiste — der Rest wird gescrollt.
+    private func applyContentSize(_ size: CGSize, to panel: NSPanel) {
+        // Während der Nutzer am Rand zieht, bestimmt er die Größe
+        guard size.width > 0, size.height > 0, !panel.inLiveResize else { return }
+        let visible = targetScreen()?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let maxHeight = visible.height - 14
+        var size = size
+        // Passt der Inhalt nicht auf den Bildschirm: eine Spalte mehr statt
+        // scrollen (höchstens drei; nimmt während des Offenseins nie ab,
+        // damit sich nichts aufschaukelt)
+        if engine.autoFitColumns {
+            var columns = engine.freeColumns ?? engine.chosenColumns
+            while size.height > maxHeight, columns < 3 {
+                columns += 1
+                engine.fitColumns = columns
+                size = measureContent()
+            }
+        }
+        let target = CGSize(width: engine.dropdownWidth.rounded(.up),
+                            height: min(size.height, maxHeight).rounded(.up))
+        let current = panel.contentRect(forFrameRect: panel.frame).size
+        if abs(current.width - target.width) > 0.5 || abs(current.height - target.height) > 0.5 {
+            panel.setContentSize(target)
+        }
+        updateSizeLimits(panel)
+        position(panel)
+    }
+
+    private func targetScreen() -> NSScreen? {
+        if let detachedTopLeft,
+           let screen = NSScreen.screens.first(where: { $0.frame.contains(detachedTopLeft) }) {
+            return screen
+        }
+        return statusItem.button?.window?.screen ?? NSScreen.screens.first
+    }
+
+    /// Ziehbare Breite: eine bis drei Spalten. Die Höhe folgt immer dem
+    /// Inhalt — eine gezogene Höhe hat Kacheln abgeschnitten.
+    private func updateSizeLimits(_ panel: NSPanel) {
+        let range = engine.widthRange
+        let height = panel.contentRect(forFrameRect: panel.frame).height
+        panel.contentMinSize = NSSize(width: range.lowerBound, height: height)
+        panel.contentMaxSize = NSSize(width: range.upperBound, height: height)
+    }
+
+    // MARK: Eck-Griffe
+
+    func gripBegan() {
+        gripStartWidth = engine.dropdownWidth
+    }
+
+    /// Griff unten links/rechts gezogen: rastet auf die nächste Spaltenzahl.
+    /// Angedockt wächst das Fenster nach beiden Seiten (es bleibt unter dem
+    /// Symbol zentriert), deshalb zählt der Weg dort doppelt.
+    func gripDragged(by dx: CGFloat, fromLeft: Bool) {
+        let factor: CGFloat = detachedTopLeft == nil ? 2 : 1
+        let raw = gripStartWidth + (fromLeft ? -dx : dx) * factor
+        let target = engine.width(forColumns: engine.nearestColumns(forWidth: raw))
+        let old = engine.dropdownWidth
+        guard abs(target - old) > 0.5 else { return }
+        engine.fitColumns = nil
+        engine.customWidth = target
+        // Losgelöst und links gezogen: rechte Kante bleibt stehen
+        if fromLeft, let topLeft = detachedTopLeft {
+            detachedTopLeft = NSPoint(x: topLeft.x - (target - old), y: topLeft.y)
+        }
+        if let panel { applyContentSize(measureContent(), to: panel) }
+    }
+
+    // MARK: Verschieben, Größe, Andocken
+
+    /// Der Griff im Kopf hat das Fenster verschoben: dort lassen.
+    func panelWasMoved() {
+        guard let panel else { return }
+        detachedTopLeft = NSPoint(x: panel.frame.minX, y: panel.frame.maxY)
+        // Losgelöst schließt es nicht mehr beim Klick daneben
+        if isOpen { startMonitors() }
+    }
+
+    /// Doppelklick auf den Griff: wieder unter dem Menüleisten-Symbol.
+    func redock() {
+        detachedTopLeft = nil
+        guard let panel else { return }
+        position(panel)
+        if isOpen { startMonitors() }
+    }
+
+    /// Einstellungen → Fenster → zurücksetzen: Breite, Höhe und Position automatisch.
+    func resetWindowGeometry() {
+        engine.customWidth = nil
+        engine.fitColumns = nil
+        detachedTopLeft = nil
+        guard let panel else { return }
+        applyContentSize(measureContent(), to: panel)
     }
 
     /// Unter dem Menüleisten-Eintrag ausrichten, am Bildschirmrand begrenzt.
     /// Ist der Eintrag nicht sichtbar (volle Menüleiste, zweite Instanz),
     /// klappt das Fenster oben rechts auf statt irgendwo.
     private func position(_ panel: NSPanel) {
-        let screen = statusItem.button?.window?.screen ?? NSScreen.screens.first
+        let screen = targetScreen()
         let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let size = panel.frame.size
         var x = visible.maxX - size.width - 8
         var y = visible.maxY - size.height - 6
 
-        if let button = statusItem.button, let buttonWindow = button.window {
+        if let detachedTopLeft {
+            // Losgelöst: obere linke Ecke bleibt, wo sie hingezogen wurde
+            x = detachedTopLeft.x
+            y = min(detachedTopLeft.y, visible.maxY) - size.height
+        } else if let button = statusItem.button, let buttonWindow = button.window {
             let anchor = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
             if anchor.width > 0, screen?.frame.intersects(anchor) ?? false {
                 x = anchor.midX - size.width / 2
@@ -208,6 +338,8 @@ final class MenuBarController: NSObject {
         }
 
         x = min(max(x, visible.minX + 8), max(visible.minX + 8, visible.maxX - size.width - 8))
+        // Oben nie über die Menüleiste, unten nie unter das Dock
+        y = min(y, visible.maxY - size.height)
         y = max(y, visible.minY + 8)
         panel.setFrameOrigin(NSPoint(x: x.rounded(), y: y.rounded()))
     }
@@ -216,8 +348,12 @@ final class MenuBarController: NSObject {
 
     private func startMonitors() {
         stopMonitors()
-        outsideMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            Task { @MainActor in self?.close() }
+        // Losgelöste Fenster bleiben offen, bis man sie über das Symbol oder
+        // Escape schließt — man hat sie ja bewusst dorthin gestellt
+        if detachedTopLeft == nil {
+            outsideMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+                Task { @MainActor in self?.close() }
+            }
         }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             if event.keyCode == 53 { // Escape
@@ -233,6 +369,56 @@ final class MenuBarController: NSObject {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
         outsideMonitor = nil
         keyMonitor = nil
+    }
+}
+
+// MARK: - Größe am Rand ziehen
+
+extension MenuBarController: NSWindowDelegate {
+    /// Live mitziehen: Die Breite geht sofort an den Inhalt (Spaltenzahl).
+    func windowDidResize(_ notification: Notification) {
+        guard let panel = notification.object as? NSPanel, panel.inLiveResize else { return }
+        let width = panel.contentRect(forFrameRect: panel.frame).width
+        if abs((engine.customWidth ?? 0) - width) > 0.5 {
+            engine.fitColumns = nil
+            engine.customWidth = width
+        }
+    }
+
+    /// Losgelassen: auf die nächste ganze Spaltenzahl einrasten.
+    func windowDidEndLiveResize(_ notification: Notification) {
+        guard let panel = notification.object as? NSPanel else { return }
+        let content = panel.contentRect(forFrameRect: panel.frame)
+        engine.customWidth = engine.width(forColumns: engine.nearestColumns(forWidth: content.width))
+        if detachedTopLeft != nil {
+            detachedTopLeft = NSPoint(x: panel.frame.minX, y: panel.frame.maxY)
+        }
+        applyContentSize(measureContent(), to: panel)
+    }
+}
+
+// MARK: - Fensterinhalt
+
+/// Dropdown im ScrollView: Passt er nicht auf den Bildschirm, wird gescrollt
+/// statt oben über den Rand hinauszuragen. Die Höhe des Inhalts wird im
+/// ScrollView gemessen — dort hängt sie nicht von der Fenstergröße ab — und
+/// an den Controller gemeldet, der das Fenster danach ausrichtet.
+struct MenuPanelContent: View {
+    let engine: StatsEngine
+    let onContentSize: (CGSize) -> Void
+
+    var body: some View {
+        ScrollView(.vertical) {
+            DropdownView(engine: engine)
+                .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+                    onContentSize(size)
+                }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        // Falls doch gescrollt werden muss: Leiste kurz zeigen
+        .scrollIndicatorsFlash(onAppear: true)
+        .overlay(alignment: .bottomLeading) { ResizeGrip(fromLeft: true) }
+        .overlay(alignment: .bottomTrailing) { ResizeGrip(fromLeft: false) }
     }
 }
 

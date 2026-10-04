@@ -162,7 +162,15 @@ enum DashboardCard: String, CaseIterable, Identifiable {
 
     /// Teilt die Karten in Zeilen: Liste = je eine, Raster = Paare,
     /// Geteilt = Intern und Extern nebeneinander, der Rest über die Breite.
-    static func rows(_ cards: [DashboardCard], layout: DropdownLayout) -> [[DashboardCard]] {
+    /// `columns` gesetzt (gezogene Fensterbreite): einfach der Reihe nach in
+    /// so viele Spalten verteilen — die Anordnung ergibt sich aus der Reihenfolge.
+    static func rows(_ cards: [DashboardCard], layout: DropdownLayout,
+                     columns: Int? = nil) -> [[DashboardCard]] {
+        if let columns {
+            return stride(from: 0, to: cards.count, by: columns).map { i in
+                Array(cards[i..<min(i + columns, cards.count)])
+            }
+        }
         switch layout {
         case .list:
             return cards.map { [$0] }

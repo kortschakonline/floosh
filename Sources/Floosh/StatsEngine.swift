@@ -100,9 +100,85 @@ final class StatsEngine {
     var cardOpacity: Double {
         didSet { defaults.set(cardOpacity, forKey: "ds.cardOpacity") }
     }
-    /// Breite des Dropdown-Fensters je nach Anordnung und Kachelgröße.
+    /// Vom Nutzer am Rand gezogene Breite des Dropdowns; `nil` = automatisch
+    /// nach Anordnung und Kachelgröße. Bestimmt die Spaltenzahl.
+    var customWidth: CGFloat? {
+        didSet {
+            if let customWidth {
+                defaults.set(Double(customWidth), forKey: "ds.customWidth")
+            } else {
+                defaults.removeObject(forKey: "ds.customWidth")
+            }
+        }
+    }
+    /// Im Dropdown ausgeblendete Kacheln (Anordnen-Modus → Auge).
+    var hiddenCards: Set<DashboardCard> {
+        didSet { defaults.set(hiddenCards.map(\.rawValue).sorted(), forKey: "ds.hiddenCards") }
+    }
+    /// Extern-Kachel weglassen, solange kein externes Laufwerk dranhängt.
+    var hideEmptyExternal: Bool {
+        didSet { defaults.set(hideEmptyExternal, forKey: "ds.hideEmptyExternal") }
+    }
+    /// Spalten automatisch erhöhen, wenn der Inhalt sonst nicht auf den
+    /// Bildschirm passt und gescrollt werden müsste.
+    var autoFitColumns: Bool {
+        didSet { defaults.set(autoFitColumns, forKey: "ds.autoFitColumns") }
+    }
+    /// Vom Fenster ermittelte Spaltenzahl, damit nichts gescrollt werden muss
+    /// (nur für das gerade offene Dropdown, wird nicht gespeichert).
+    var fitColumns: Int?
+    /// Spalten ohne automatische Anpassung: gezogen/gewählt oder nach Anordnung.
+    var chosenColumns: Int {
+        if customWidth != nil { return columns(forWidth: clampedWidth(customWidth!)) }
+        return layout == .grid ? 2 : 1
+    }
+    /// Breite des Dropdown-Fensters: gezogen/gewählt oder je nach Anordnung
+    /// und Kachelgröße — automatisch breiter, wenn `fitColumns` mehr verlangt.
     var dropdownWidth: CGFloat {
-        layout == .grid ? cardSize.gridWidth : cardSize.dropdownWidth
+        if let fitColumns, fitColumns > chosenColumns { return width(forColumns: fitColumns) }
+        if let customWidth { return clampedWidth(customWidth) }
+        return layout == .grid ? cardSize.gridWidth : cardSize.dropdownWidth
+    }
+    /// Exakte Fensterbreite für 1–3 Spalten in Normalbreite.
+    func width(forColumns n: Int) -> CGFloat {
+        let card = cardSize.dropdownWidth - 2 * cardSize.outerPadding
+        let n = CGFloat(min(max(n, 1), 3))
+        return n * card + (n - 1) * cardSize.outerSpacing + 2 * cardSize.outerPadding
+    }
+    /// Wie `columns(forWidth:)`, aber gerundet — ab der halben Kachel springt es.
+    func nearestColumns(forWidth width: CGFloat) -> Int {
+        let card = cardSize.dropdownWidth - 2 * cardSize.outerPadding
+        let inner = width - 2 * cardSize.outerPadding
+        let n = ((inner + cardSize.outerSpacing) / (card + cardSize.outerSpacing)).rounded()
+        return min(max(Int(n), 1), 3)
+    }
+    func columns(forWidth width: CGFloat) -> Int {
+        let card = cardSize.dropdownWidth - 2 * cardSize.outerPadding
+        let inner = width - 2 * cardSize.outerPadding
+        let fit = Int(((inner + cardSize.outerSpacing) / (card + cardSize.outerSpacing)) + 0.01)
+        return min(max(fit, 1), 3)
+    }
+    /// Spalten-Knopf im Kopf: 1 → 2 → 3 → 1.
+    func cycleColumns() {
+        let next = (max(chosenColumns, fitColumns ?? 0) % 3) + 1
+        fitColumns = nil
+        customWidth = width(forColumns: next)
+    }
+    /// Kleinste und größte ziehbare Breite: eine bis drei Spalten.
+    var widthRange: ClosedRange<CGFloat> {
+        let card = cardSize.dropdownWidth - 2 * cardSize.outerPadding
+        let three = 3 * card + 2 * cardSize.outerSpacing + 2 * cardSize.outerPadding
+        return cardSize.dropdownWidth...three
+    }
+    func clampedWidth(_ width: CGFloat) -> CGFloat {
+        min(max(width, widthRange.lowerBound), widthRange.upperBound)
+    }
+    /// Spalten bei gezogener Breite (1–3): so viele Kacheln in Normalbreite,
+    /// wie nebeneinander passen. `nil` = feste Anordnung (Liste/Geteilt/Raster).
+    var freeColumns: Int? {
+        if let fitColumns, fitColumns > chosenColumns { return fitColumns }
+        guard customWidth != nil else { return nil }
+        return columns(forWidth: dropdownWidth)
     }
     var menuChannel: MenuChannel {
         didSet { defaults.set(menuChannel.rawValue, forKey: "ds.menuChannel") }
@@ -146,6 +222,11 @@ final class StatsEngine {
         selectionStyle = SelectionStyle(rawValue: defaults.string(forKey: "ds.selection") ?? "") ?? .border
         layout = DropdownLayout(rawValue: defaults.string(forKey: "ds.layout") ?? "") ?? .list
         cardOrder = Self.loadCardOrder(defaults)
+        customWidth = (defaults.object(forKey: "ds.customWidth") as? Double).map { CGFloat($0) }
+        hiddenCards = Set((defaults.stringArray(forKey: "ds.hiddenCards") ?? [])
+            .compactMap(DashboardCard.init(rawValue:)))
+        hideEmptyExternal = defaults.object(forKey: "ds.hideEmptyExternal") as? Bool ?? false
+        autoFitColumns = defaults.object(forKey: "ds.autoFitColumns") as? Bool ?? true
         backdropOpacity = defaults.object(forKey: "ds.backdrop") as? Double ?? 0.5
         cardOpacity = defaults.object(forKey: "ds.cardOpacity") as? Double ?? 0.0
         menuChannel = MenuChannel(rawValue: defaults.string(forKey: "ds.menuChannel") ?? "") ?? .both
@@ -175,6 +256,29 @@ final class StatsEngine {
         let to = from + offset
         guard cardOrder.indices.contains(to) else { return }
         cardOrder.swapAt(from, to)
+    }
+
+    /// Anordnen per Ziehen: `card` vor `target` einsetzen (`nil` = ans Ende).
+    func moveCard(_ card: DashboardCard, before target: DashboardCard?) {
+        guard card != target, cardOrder.contains(card) else { return }
+        var order = cardOrder
+        order.removeAll { $0 == card }
+        if let target, let index = order.firstIndex(of: target) {
+            order.insert(card, at: index)
+        } else {
+            order.append(card)
+        }
+        cardOrder = order
+    }
+
+    /// Karten, die das Dropdown aus der Auswahl tatsächlich zeigt.
+    func shownInDropdown(_ cards: some Collection<DashboardCard>) -> [DashboardCard] {
+        ordered(cards).filter { card in
+            if hiddenCards.contains(card) { return false }
+            if card == .externalDrives, hideEmptyExternal,
+               state(for: .externalDrives).devices.isEmpty { return false }
+            return true
+        }
     }
 
     func start() {

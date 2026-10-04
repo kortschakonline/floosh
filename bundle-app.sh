@@ -9,9 +9,14 @@ VERSION=$(tr -d '[:space:]' < VERSION)
 BUILD=$(git rev-list --count HEAD 2>/dev/null || echo 1)
 
 echo "→ Release-Build floosh $VERSION ($BUILD) (Universal: arm64 + x86_64) …"
-BIN=".build/apple/Products/Release/Floosh"
-HELPER_BIN=".build/apple/Products/Release/FlooshFanHelper"
-if ! swift build -c release --arch arm64 --arch x86_64; then
+if swift build -c release --arch arm64 --arch x86_64; then
+  # Ausgabeordner bei SwiftPM erfragen, nicht fest annehmen: Seit Xcode 27
+  # landet der Universal-Build in .build/out/… statt .build/apple/… — der
+  # feste Pfad hat sonst still eine veraltete Programmdatei eingepackt.
+  BIN_DIR=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)
+  BIN="$BIN_DIR/Floosh"
+  HELPER_BIN="$BIN_DIR/FlooshFanHelper"
+else
   echo "→ Universal-Build fehlgeschlagen — Fallback: nur arm64 …"
   BIN=".build/release/Floosh"
   HELPER_BIN=".build/release/FlooshFanHelper"
@@ -45,6 +50,19 @@ APP="build/floosh.app"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Library/LaunchDaemons"
+# Sicherung: nie eine Programmdatei einpacken, die älter ist als der Code
+# (je Programm nur gegen den eigenen Code — unveränderte Targets baut
+# SwiftPM nicht neu)
+check_fresh() {
+  local bin=$1; shift
+  local newest=$(ls -t "$@" | head -1)
+  if [[ "$bin" -ot "$newest" ]]; then
+    echo "✗ $bin ist älter als $newest — veraltete Programmdatei, Abbruch"
+    exit 1
+  fi
+}
+check_fresh "$BIN" Sources/Floosh/*.swift Sources/FlooshShared/*.swift
+check_fresh "$HELPER_BIN" Sources/FlooshFanHelper/*.swift Sources/FlooshShared/*.swift
 cp "$BIN" "$APP/Contents/MacOS/floosh"
 cp "$HELPER_BIN" "$APP/Contents/MacOS/FlooshFanHelper"
 

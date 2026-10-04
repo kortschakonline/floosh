@@ -99,6 +99,17 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   daneben, Escape oder erneutem Klick schließt. Auch das Einstellungsfenster
   gehört jetzt der App (`SettingsWindowController`) — `showSettingsWindow:`
   meldet in dieser Konstellation Erfolg, öffnet aber nichts.
+- Fenster frei (1.8): verschiebbar am floosh-Schriftzug (`WindowDragHandle`,
+  `performDrag`; Doppelklick dockt wieder an — losgelöst schließt es nicht beim
+  Klick daneben), 1–3 Spalten per Knopf im Kopf, Eck-Griffe oder Fensterrand
+  (rastet ein). Die Größe setzt der Controller selbst (`applyContentSize`), nicht
+  SwiftUI per `.preferredContentSize` — diese Rückkopplung hing unter macOS 27.2
+  Beta in einer Endlosschleife. Die Höhe folgt immer dem Inhalt; passt er nicht
+  auf den Bildschirm, nimmt floosh automatisch eine Spalte dazu (abschaltbar),
+  sonst wird im `ScrollView` gescrollt. **Anordnen-Modus** (Raster-Knopf):
+  Kacheln als Platzhalter ziehen (`draggable`/`dropDestination` mit
+  `floosh-card:`-Text) und ausblenden; Extern optional nur bei angeschlossenem
+  Laufwerk.
 - Ablage (`FileShelf.swift`, `ShelfCard.swift`): Dateien kurz parken — als Karte
   im Dropdown und im Desktop-Panel. Hinein per Ziehen auf das Menüleisten-Symbol
   oder irgendwo ins Fenster (`dropDestination`), über die
