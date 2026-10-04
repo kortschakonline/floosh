@@ -105,6 +105,8 @@ final class MenuBarOrganizer {
 
     func start() {
         guard enabled, toggle == nil else { return }
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        OrganizerLog.write("Start floosh \(version), Bedienungshilfen \(AXIsProcessTrusted() ? "ja" : "nein"), Leiste \(barMode ? "ja" : "nein")")
         if Self.seedPositionsIfNeeded() {
             // floosh selbst soll rechts vom Pfeil sichtbar bleiben
             MenuBarController.shared?.recreateStatusItem()
@@ -319,11 +321,15 @@ final class MenuBarOrganizer {
         alert.runModal()
     }
 
-    private func apply(expanded: Bool, always: Bool, quiet: Bool = false) {
+    private func apply(expanded: Bool, always: Bool, quiet: Bool = false, caller: String = #function) {
         // Platz bis zum linken Rand des Symbolbereichs messen, solange die
         // Trenner noch schmal und sichtbar sind
         let hiddenFill = fillLength(for: hiddenDivider)
         let alwaysFill = fillLength(for: alwaysDivider)
+        if !expanded {
+            OrganizerLog.write("einklappen (\(caller)): Trenner \(OrganizerLog.num(hiddenFill)) / \(OrganizerLog.num(alwaysFill)) · \(Self.lastLimitInfo)")
+            logLayoutSoon()
+        }
         isExpanded = expanded
         showsAlwaysHidden = expanded && always
         hiddenDivider?.length = expanded ? NSStatusItem.variableLength : (hiddenFill ?? Self.hidingLength)
@@ -415,7 +421,17 @@ final class MenuBarOrganizer {
         // Als Abstand vom rechten Bildschirmrand: Mit mehreren Monitoren
         // wandert der Trenner auf den Bildschirm mit dem Fokus, der Abstand
         // bleibt aber gleich.
-        if item.length != Self.hidingLength {
+        // Bevorzugt über die Bedienungshilfen: Unter macOS 27 stimmt die
+        // Fensterlage der Status-Knöpfe nicht mit der Menüleiste überein.
+        // Dort zählt die Kante auch eingeklappt, solange macOS den Trenner in
+        // der verlangten Breite auslegt (also nicht ausgeblendet hat).
+        let label = item === hiddenDivider ? Self.hiddenDividerLabel : Self.alwaysDividerLabel
+        if AXIsProcessTrusted(), let ax = Self.axFrame(ofOwnItemLabeled: label), ax.width > 0 {
+            if ax.width < 200 || abs(ax.width - item.length) < 2 {
+                let axScreen = NSScreen.screens.first { $0.frame.minX <= ax.midX && ax.midX < $0.frame.maxX } ?? screen
+                rightInsets[ObjectIdentifier(item)] = axScreen.frame.maxX - ax.maxX
+            }
+        } else if item.length != Self.hidingLength {
             let frame = window.convertToScreen(button.convert(button.bounds, to: nil))
             if frame.width > 0, frame.width < 200 {
                 rightInsets[ObjectIdentifier(item)] = screen.frame.maxX - frame.maxX
@@ -436,14 +452,65 @@ final class MenuBarOrganizer {
     /// direkt nach einem App-Wechsel oder wenn floosh selbst vorne ist.
     private static var lastMenuWidth: CGFloat?
 
+    /// Wie die letzte Grenze zustande kam — fürs Diagnose-Protokoll.
+    private static var lastLimitInfo = ""
+
+    /// Lage eines eigenen Status-Symbols laut Bedienungshilfen (globale
+    /// x-Koordinaten wie bei NSScreen).
+    private static func axFrame(ofOwnItemLabeled label: String) -> CGRect? {
+        let app = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        var bar: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(app, "AXExtrasMenuBar" as CFString, &bar) == .success,
+              let bar else { return nil }
+        var children: CFTypeRef?
+        AXUIElementCopyAttributeValue(bar as! AXUIElement, kAXChildrenAttribute as CFString, &children)
+        for element in (children as? [AXUIElement]) ?? [] {
+            var desc: CFTypeRef?
+            AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &desc)
+            guard desc as? String == label else { continue }
+            var pos: CFTypeRef?
+            var size: CFTypeRef?
+            AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &pos)
+            AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size)
+            var p = CGPoint.zero
+            var s = CGSize.zero
+            if let pos { AXValueGetValue(pos as! AXValue, .cgPoint, &p) }
+            if let size { AXValueGetValue(size as! AXValue, .cgSize, &s) }
+            return CGRect(origin: p, size: s)
+        }
+        return nil
+    }
+
+    /// Kurz nach dem Einklappen festhalten, wie macOS die Trenner tatsächlich
+    /// ausgelegt hat — daran sieht man, ob ein Trenner ausgeblendet wurde.
+    private func logLayoutSoon() {
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard let self, let hiddenDivider = self.hiddenDivider else { return }
+            let window = hiddenDivider.button?.window
+            let windowFrame = self.frame(of: hiddenDivider) ?? .zero
+            let ax = AXIsProcessTrusted() ? Self.axFrame(ofOwnItemLabeled: Self.hiddenDividerLabel) : nil
+            let axToggle = AXIsProcessTrusted() ? self.axToggleFrame() : nil
+            OrganizerLog.write("  Lage: Länge \(Int(hiddenDivider.length)), Fenster \(OrganizerLog.rect(windowFrame)) sichtbar \(window?.occlusionState.contains(.visible) == true ? "ja" : "nein"), AX \(ax.map(OrganizerLog.rect) ?? "–"), Pfeil AX \(axToggle.map(OrganizerLog.rect) ?? "–"), Abstände \(self.rightInsets.values.map { Int($0) })")
+        }
+    }
+
+    private func axToggleFrame() -> CGRect? {
+        Self.axFrame(ofOwnItemLabeled: "Versteckte Symbole zeigen") ?? Self.axFrame(ofOwnItemLabeled: "Symbole verstecken")
+    }
+
     /// Wo der Bereich der Menüleisten-Symbole links endet: an der Notch, sonst
     /// am Ende der Menüs der gerade aktiven App (Bedienungshilfen). Ohne Notch
     /// bis zum Bildschirmrand zu rechnen wäre zu breit — macOS blendet den
     /// Trenner dann einfach aus, statt die Symbole wegzuschieben (Mac mini).
     private static func statusAreaLeftLimit(on screen: NSScreen) -> CGFloat {
+        lastLimitInfo = "Bildschirm x \(Int(screen.frame.minX))…\(Int(screen.frame.maxX)), \(NSScreen.screens.count) Bildschirm(e)"
         if hasNotch(screen), let notch = screen.auxiliaryTopRightArea {
+            lastLimitInfo += ", Notch ab \(Int(notch.minX))"
             return notch.minX
         }
+        let front = NSWorkspace.shared.frontmostApplication
+        lastLimitInfo += ", vorne: \(front?.localizedName ?? "?"), AX \(AXIsProcessTrusted() ? "ja" : "nein")"
         if AXIsProcessTrusted(), let app = NSWorkspace.shared.frontmostApplication,
            app.processIdentifier != ProcessInfo.processInfo.processIdentifier {
             let axApp = AXUIElementCreateApplication(app.processIdentifier)
@@ -473,12 +540,17 @@ final class MenuBarOrganizer {
                     let menuScreenMinX = NSScreen.screens
                         .first { $0.frame.minX <= minX && minX < $0.frame.maxX }?.frame.minX ?? screen.frame.minX
                     lastMenuWidth = maxX - menuScreenMinX
+                    lastLimitInfo += ", Menüs \(Int(minX))…\(Int(maxX))"
+                } else {
+                    lastLimitInfo += ", keine Menüs"
                 }
             }
         }
         if AXIsProcessTrusted(), let lastMenuWidth {
+            lastLimitInfo += ", Menübreite \(Int(lastMenuWidth))"
             return screen.frame.minX + lastMenuWidth + 12
         }
+        lastLimitInfo += ", Schätzung 45 %"
         // Ohne Bedienungshilfen: großzügig schätzen — App-Menüs nehmen selten
         // mehr als 45 % der Breite ein
         return screen.frame.minX + screen.frame.width * 0.45
@@ -623,5 +695,44 @@ final class MenuBarOrganizer {
         }
         image.isTemplate = true
         return image
+    }
+}
+
+/// Diagnose-Protokoll des Organizers unter ~/Library/Logs/floosh-organizer.log
+/// (bleibt klein: wird ab 256 KB neu begonnen).
+@MainActor
+enum OrganizerLog {
+    static let url = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Logs/floosh-organizer.log")
+
+    private static let formatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss.SSS"
+        return f
+    }()
+
+    static func write(_ message: String) {
+        let line = "\(formatter.string(from: Date())) \(message)\n"
+        guard let data = line.data(using: .utf8) else { return }
+        let fm = FileManager.default
+        if let size = (try? fm.attributesOfItem(atPath: url.path)[.size]) as? Int, size > 256_000 {
+            try? fm.removeItem(at: url)
+        }
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(data)
+            try? handle.close()
+        } else {
+            try? fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? data.write(to: url)
+        }
+    }
+
+    static func num(_ value: CGFloat?) -> String {
+        value.map { String(Int($0)) } ?? "–"
+    }
+
+    static func rect(_ r: CGRect) -> String {
+        "x \(Int(r.minX))…\(Int(r.maxX)) (\(Int(r.width)))"
     }
 }
