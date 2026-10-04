@@ -550,6 +550,10 @@ private struct OrganizerSettingsTab: View {
                 Text("floosh setzt einen Pfeil ‹ und zwei Trenner in die Menüleiste. Was links davon liegt, wird versteckt und kommt per Klick auf den Pfeil wieder.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if organizer.enabled && organizer.needsAccessibility {
+                    PermissionRow(title: "Bedienungshilfen", detail: "Ohne Notch nötig, sonst bleiben die Symbole sichtbar",
+                                  granted: false, pane: "Privacy_Accessibility")
+                }
             }
             Section("So ordnest du an") {
                 Label("⌘ gedrückt halten und Symbole in der Menüleiste ziehen", systemImage: "command")

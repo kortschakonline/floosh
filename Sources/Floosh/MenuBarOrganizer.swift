@@ -83,6 +83,18 @@ final class MenuBarOrganizer {
         barMode = defaults.object(forKey: "organizer.barMode") as? Bool ?? false
     }
 
+    /// Ohne Notch muss floosh wissen, wo die App-Menüs enden — das geht nur
+    /// über die Bedienungshilfen. Fehlt das Recht, bleiben die Symbole sichtbar.
+    var needsAccessibility: Bool {
+        guard !AXIsProcessTrusted() else { return false }
+        let screen = toggle?.button?.window?.screen ?? NSScreen.main
+        return !(screen.map(Self.hasNotch) ?? false)
+    }
+
+    private static func hasNotch(_ screen: NSScreen) -> Bool {
+        screen.auxiliaryTopRightArea != nil && screen.safeAreaInsets.top > 0
+    }
+
     /// Leiste statt Ausklappen — nur, wenn die Rechte auch wirklich da sind.
     private var usesBar: Bool {
         barMode && MenuBarItems.shared.hasAllPermissions
@@ -146,6 +158,8 @@ final class MenuBarOrganizer {
     func stop() {
         collapseTask?.cancel()
         hoverTask?.cancel()
+        trustTask?.cancel()
+        trustTask = nil
         monitors.forEach(NSEvent.removeMonitor)
         monitors.removeAll()
         if let appSwitchObserver { NSWorkspace.shared.notificationCenter.removeObserver(appSwitchObserver) }
@@ -222,9 +236,46 @@ final class MenuBarOrganizer {
             return
         }
         apply(expanded: false, always: false)
+        if needsAccessibility { warnMissingAccessibility() }
     }
 
     private var warnedMisplaced = false
+    private var warnedAccessibility = false
+    private var trustTask: Task<Void, Never>?
+
+    /// Einmal pro Start erklären, warum ohne Bedienungshilfen nichts
+    /// verschwindet, und danach auf die Freigabe warten.
+    private func warnMissingAccessibility() {
+        watchForTrust()
+        guard !warnedAccessibility else { return }
+        warnedAccessibility = true
+        let alert = NSAlert()
+        alert.messageText = "floosh braucht die Bedienungshilfen"
+        alert.informativeText = "Auf Bildschirmen ohne Notch muss floosh wissen, wo die Menüs der aktiven App enden — sonst bleiben die versteckten Symbole mitten in der Menüleiste stehen.\n\nNach einem Update verlangt macOS die Freigabe oft neu: In der Liste floosh einmal aus- und wieder einschalten."
+        alert.addButton(withTitle: "Freigeben …")
+        alert.addButton(withTitle: "Später")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            MenuBarItems.shared.requestPermissions()
+            MenuBarItems.shared.openPrivacySettings("Privacy_Accessibility")
+        }
+    }
+
+    /// Sobald das Recht da ist, die Trennerbreite neu berechnen.
+    private func watchForTrust() {
+        guard trustTask == nil else { return }
+        trustTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                guard let self, self.isRunning else { return }
+                if AXIsProcessTrusted() {
+                    self.trustTask = nil
+                    if !self.isExpanded { self.apply(expanded: false, always: false, quiet: true) }
+                    return
+                }
+            }
+        }
+    }
 
     /// Lage von Pfeil und Trenner über die Bedienungshilfen (dieselben
     /// Koordinaten wie die Menüleiste). Ohne Recht: keine Prüfung.
@@ -371,7 +422,7 @@ final class MenuBarOrganizer {
     /// bis zum Bildschirmrand zu rechnen wäre zu breit — macOS blendet den
     /// Trenner dann einfach aus, statt die Symbole wegzuschieben (Mac mini).
     private static func statusAreaLeftLimit(on screen: NSScreen) -> CGFloat {
-        if let notch = screen.auxiliaryTopRightArea, screen.safeAreaInsets.top > 0 {
+        if hasNotch(screen), let notch = screen.auxiliaryTopRightArea {
             return notch.minX
         }
         if AXIsProcessTrusted(), let app = NSWorkspace.shared.frontmostApplication {
@@ -380,7 +431,8 @@ final class MenuBarOrganizer {
             if AXUIElementCopyAttributeValue(axApp, kAXMenuBarAttribute as CFString, &bar) == .success, let bar {
                 var children: CFTypeRef?
                 AXUIElementCopyAttributeValue(bar as! AXUIElement, kAXChildrenAttribute as CFString, &children)
-                var maxX = screen.frame.minX
+                var minX = CGFloat.greatestFiniteMagnitude
+                var maxX = -CGFloat.greatestFiniteMagnitude
                 for element in (children as? [AXUIElement]) ?? [] {
                     var pos: CFTypeRef?
                     var size: CFTypeRef?
@@ -390,9 +442,18 @@ final class MenuBarOrganizer {
                     var s = CGSize.zero
                     if let pos { AXValueGetValue(pos as! AXValue, .cgPoint, &p) }
                     if let size { AXValueGetValue(size as! AXValue, .cgSize, &s) }
+                    guard s.width > 0 else { continue }
+                    minX = min(minX, p.x)
                     maxX = max(maxX, p.x + s.width)
                 }
-                if maxX > screen.frame.minX { return maxX + 12 }
+                // Mit mehreren Bildschirmen liegen die Menüs evtl. auf einem
+                // anderen als der Trenner — daher relativ zum eigenen
+                // Bildschirm rechnen
+                if maxX > minX {
+                    let menuScreenMinX = NSScreen.screens
+                        .first { $0.frame.minX <= minX && minX < $0.frame.maxX }?.frame.minX ?? screen.frame.minX
+                    return screen.frame.minX + (maxX - menuScreenMinX) + 12
+                }
             }
         }
         // Ohne Bedienungshilfen: großzügig schätzen — App-Menüs nehmen selten
