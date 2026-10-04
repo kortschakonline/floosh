@@ -215,7 +215,9 @@ struct CardIcon: View {
 // MARK: - Diagramm
 
 private struct ChartPoint: Identifiable {
-    let id: String
+    /// Zeit in ms × 2 + Kanal — eine Zahl statt eines pro Runde neu
+    /// formatierten Texts.
+    let id: Int
     let date: Date
     let channel: String
     let value: Double
@@ -234,8 +236,8 @@ struct SpeedChart: View {
 
         let points = samples.flatMap { s in
             [
-                ChartPoint(id: "r\(s.date.timeIntervalSinceReferenceDate)", date: s.date, channel: "read", value: s.read),
-                ChartPoint(id: "w\(s.date.timeIntervalSinceReferenceDate)", date: s.date, channel: "write", value: s.write),
+                ChartPoint(id: Int(s.date.timeIntervalSinceReferenceDate * 1000) * 2, date: s.date, channel: "read", value: s.read),
+                ChartPoint(id: Int(s.date.timeIntervalSinceReferenceDate * 1000) * 2 + 1, date: s.date, channel: "write", value: s.write),
             ]
         }
 

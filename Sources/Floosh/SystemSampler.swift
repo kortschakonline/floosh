@@ -92,9 +92,17 @@ final class SystemSampler {
 
     // MARK: Abtastung
 
+    /// GPU-Auslastung nur jede zweite Runde: Die IOKit-Abfrage über alle
+    /// `IOAccelerator` ist die teuerste Einzelmessung, und die Anzeige ist
+    /// ohnehin geglättet.
+    private var gpuRound = 0
+    private var lastGPU: Double?
+
     func sample() -> Reading {
-        Reading(cpuUsage: cpuUsage(),
-                gpuUsage: Self.gpuUsage(),
+        gpuRound += 1
+        if gpuRound % 2 == 1 { lastGPU = Self.gpuUsage() }
+        return Reading(cpuUsage: cpuUsage(),
+                gpuUsage: lastGPU,
                 cpuTemp: maxTemp(of: cpuTempKeys),
                 gpuTemp: maxTemp(of: gpuTempKeys),
                 fans: fanReadings())

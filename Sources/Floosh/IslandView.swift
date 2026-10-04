@@ -111,20 +111,10 @@ struct IslandView: View {
         .foregroundStyle(.white)
     }
 
-    @ViewBuilder
+    /// Eigene View: Nur sie liest die sekündlich wechselnden Messwerte —
+    /// so wird pro Runde nicht die ganze Island neu ausgewertet.
     private func sideValue(_ value: IslandValue) -> some View {
-        if let text = IslandFormat.value(value, engine: engine) {
-            HStack(spacing: 4) {
-                Image(systemName: IslandFormat.symbol(value, engine: engine))
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(IslandFormat.tint(value, engine: engine))
-                Text(text)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
-        }
+        IslandSideValue(value: value, engine: engine)
     }
 
     /// Aufgeklappt: Tabs links, Dropdown/Einstellungen rechts — unterhalb der Notch.
@@ -163,6 +153,27 @@ struct IslandView: View {
 
     private var availableTabs: [IslandTab] {
         IslandTab.allCases.filter { $0 != .battery || engine.battery != nil }
+    }
+}
+
+/// Ein Wert neben der Notch (Ruhe/Vorschau).
+private struct IslandSideValue: View {
+    let value: IslandValue
+    let engine: StatsEngine
+
+    var body: some View {
+        if let text = IslandFormat.value(value, engine: engine) {
+            HStack(spacing: 4) {
+                Image(systemName: IslandFormat.symbol(value, engine: engine))
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(IslandFormat.tint(value, engine: engine))
+                Text(text)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+        }
     }
 }
 

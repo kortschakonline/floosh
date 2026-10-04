@@ -79,7 +79,7 @@ final class DragCatcher {
         guard loop == nil else { return }
         loop = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(150))
+                try? await Task.sleep(for: .milliseconds(250)) // reicht fürs Aufklappen, spart Weckungen
                 guard !Task.isCancelled else { return }
                 self?.poll()
             }
