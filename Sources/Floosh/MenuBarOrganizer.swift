@@ -128,7 +128,12 @@ final class MenuBarOrganizer {
     // MARK: Ausklappen/Einklappen
 
     @objc private func toggleClicked(_ sender: NSStatusBarButton) {
-        guard let event = NSApp.currentEvent else { return }
+        // Ohne Mausereignis (Bedienungshilfen/VoiceOver „Drücken"): wie Linksklick
+        guard let event = NSApp.currentEvent,
+              event.type == .leftMouseUp || event.type == .rightMouseUp else {
+            apply(expanded: !isExpanded, always: false)
+            return
+        }
         if event.type == .rightMouseUp {
             showMenu()
             return
