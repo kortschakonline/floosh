@@ -38,13 +38,10 @@ enum SpeedGroup: String, CaseIterable, Identifiable, Codable {
         style == .filled ? filledSymbol : symbol
     }
 
-    var tint: Color {
-        switch self {
-        case .internalDrives: Color(red: 0.35, green: 0.55, blue: 1.0)   // Blau
-        case .externalDrives: Color(red: 1.0, green: 0.62, blue: 0.25)   // Orange
-        case .network: Color(red: 0.30, green: 0.85, blue: 0.55)         // Grün
-        }
-    }
+    /// Farbe aus dem einstellbaren Schema (`CardTheme`).
+    @MainActor var tint: Color { CardTheme.shared.color(slot) }
+    /// Abgestufte Zweitfarbe (Schreiben bzw. Upload).
+    @MainActor var secondaryTint: Color { CardTheme.shared.secondary(slot) }
 
     /// Kanal-Beschriftungen: Laufwerke lesen/schreiben, Netzwerk lädt herunter/hoch.
     var readLabel: String { self == .network ? "Download" : "Lesen" }

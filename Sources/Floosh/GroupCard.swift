@@ -47,7 +47,7 @@ struct GroupCard: View {
     @ViewBuilder
     private func fullContent(_ state: StatsEngine.GroupState) -> some View {
         HStack(alignment: .center, spacing: 10) {
-            CardIcon(symbol: group.symbol, tint: group.tint, size: size)
+            CardIcon(glyph: CardTheme.shared.glyph(group.slot), tint: group.tint, size: size)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(group.title)
@@ -61,7 +61,7 @@ struct GroupCard: View {
 
             VStack(alignment: .trailing, spacing: 1) {
                 speedRow(glyph: group.readGlyph, value: state.read, color: group.tint)
-                speedRow(glyph: group.writeGlyph, value: state.write, color: group.tint.opacity(0.55))
+                speedRow(glyph: group.writeGlyph, value: state.write, color: group.secondaryTint)
             }
         }
 
@@ -82,7 +82,7 @@ struct GroupCard: View {
     @ViewBuilder
     private func compactContent(_ state: StatsEngine.GroupState) -> some View {
         HStack(alignment: .center, spacing: 8) {
-            CardIcon(symbol: group.symbol, tint: group.tint, size: size)
+            CardIcon(glyph: CardTheme.shared.glyph(group.slot), tint: group.tint, size: size)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(group.title)
@@ -99,7 +99,7 @@ struct GroupCard: View {
 
         VStack(alignment: .leading, spacing: 1) {
             speedRow(glyph: group.readGlyph, value: state.read, color: group.tint)
-            speedRow(glyph: group.writeGlyph, value: state.write, color: group.tint.opacity(0.55))
+            speedRow(glyph: group.writeGlyph, value: state.write, color: group.secondaryTint)
         }
 
         SpeedChart(engine: engine, group: group)
@@ -160,7 +160,7 @@ struct GroupCard: View {
                 Text(group.writeGlyph).bold()
                 Text(SpeedFormat.speed(peak.write, units: engine.units))
             }
-            .foregroundStyle(group.tint.opacity(0.55))
+            .foregroundStyle(group.secondaryTint)
             Spacer()
         }
         .font(.caption2)
@@ -181,7 +181,7 @@ struct GroupCard: View {
                     Text("\(group.readGlyph) \(SpeedFormat.speed(device.read, units: engine.units, compact: true))")
                         .foregroundStyle(group.tint)
                     Text("\(group.writeGlyph) \(SpeedFormat.speed(device.write, units: engine.units, compact: true))")
-                        .foregroundStyle(group.tint.opacity(0.65))
+                        .foregroundStyle(group.secondaryTint)
                 }
                 .font(.system(size: 10, weight: .medium))
                 .monospacedDigit()
@@ -199,14 +199,22 @@ struct GroupCard: View {
 
 /// Rundes Symbol in der Kopfzeile jeder Karte, skaliert mit der Kachelgröße.
 struct CardIcon: View {
-    let symbol: String
+    let glyph: CardGlyph
     let tint: Color
     let size: CardSize
 
+    init(glyph: CardGlyph, tint: Color, size: CardSize) {
+        self.glyph = glyph
+        self.tint = tint
+        self.size = size
+    }
+
+    init(symbol: String, tint: Color, size: CardSize) {
+        self.init(glyph: .sf(symbol), tint: tint, size: size)
+    }
+
     var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: size.iconFont, weight: .semibold))
-            .foregroundStyle(tint)
+        CardGlyphView(glyph: glyph, tint: tint, size: size.iconFont)
             .frame(width: size.iconSize, height: size.iconSize)
             .background(tint.opacity(0.16), in: .circle)
     }
@@ -268,7 +276,7 @@ struct SpeedChart: View {
     }
 
     private func color(for channel: String) -> Color {
-        channel == "read" ? group.tint : group.tint.opacity(0.5)
+        channel == "read" ? group.tint : group.secondaryTint
     }
 
     private func gradient(for channel: String) -> LinearGradient {

@@ -161,6 +161,10 @@ struct SettingsWindow: View {
                 Toggle("Einzelne Geräte anzeigen", isOn: $engine.showDevices)
             }
 
+            Section("Farben & Icons") {
+                ThemeEditor(theme: .shared)
+            }
+
             Section("Hintergrund") {
                 LabeledContent("Fläche") {
                     Slider(value: $engine.backdropOpacity, in: 0...1)
@@ -465,6 +469,66 @@ private struct PanelSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// Farbe und Icon je Kachel. Die Zweitfarbe (Schreiben, GPU, Upload) wird
+/// als hellere Abstufung aus der Grundfarbe abgeleitet.
+private struct ThemeEditor: View {
+    @Bindable var theme: CardTheme
+
+    var body: some View {
+        ForEach(ThemeSlot.allCases) { slot in
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 10) {
+                    Text(slot.title)
+                        .font(.body.weight(.semibold))
+                    // Vorschau der Abstufung: Grundfarbe und Zweitfarbe
+                    HStack(spacing: 3) {
+                        Capsule().fill(theme.color(slot)).frame(width: 18, height: 6)
+                        Capsule().fill(theme.secondary(slot)).frame(width: 18, height: 6)
+                    }
+                    Spacer()
+                    ColorPicker("Farbe für \(slot.title)", selection: theme.colorBinding(slot),
+                                supportsOpacity: false)
+                        .labelsHidden()
+                    Button {
+                        theme.reset(slot)
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("\(slot.title): Farbe und Icon zurücksetzen")
+                }
+                HStack(spacing: 6) {
+                    ForEach(slot.glyphOptions) { glyph in
+                        let selected = theme.glyph(slot) == glyph
+                        Button {
+                            theme.setGlyph(glyph, for: slot)
+                        } label: {
+                            CardGlyphView(glyph: glyph, tint: theme.color(slot), size: 15)
+                                .frame(width: 32, height: 32)
+                                .background(theme.color(slot).opacity(selected ? 0.22 : 0.06),
+                                            in: .rect(cornerRadius: 8))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .strokeBorder(theme.color(slot).opacity(selected ? 0.9 : 0), lineWidth: 1.5)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .help(glyph.isStreamline ? "Streamline-Icon" : (glyph == .floosh ? "floosh-Logo" : "SF Symbol"))
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+        }
+        HStack {
+            Text("Akku färbt sich nach Zustand. Icons teils von Streamline (Core Free, CC BY 4.0).")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("Alle zurücksetzen") { theme.resetAll() }
+        }
     }
 }
 

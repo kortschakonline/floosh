@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Konvertiert SVG-Pfaddaten in SwiftUI-Path-Code (Design-Koordinaten)."""
-import re, sys, json
+import re, sys, json, math
 
 NUM = re.compile(r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?')
-CMD = re.compile(r'[MmLlHhVvCcSsQqTtZz]')
+CMD = re.compile(r'[MmLlHhVvCcSsQqTtZzAa]')
 
 def tokenize(d):
     out, i = [], 0
@@ -76,6 +76,12 @@ def parse(d):
             segs.append(('C', x1, y1, x2, y2, x, y))
             pcx, pcy = x2, y2
             cx, cy = x, y
+        elif cmd in 'Aa':
+            rx, ry, rot, large, sweep, x, y = take(7)
+            if cmd == 'a': x += cx; y += cy
+            segs.extend(arc_to_curves(cx, cy, rx, ry, rot, int(large), int(sweep), x, y))
+            pcx = pcy = None
+            cx, cy = x, y
         elif cmd in 'Zz':
             segs.append(('Z',))
             cx, cy = sx, sy
@@ -84,6 +90,63 @@ def parse(d):
             raise ValueError(f"cmd {cmd!r} nicht unterstützt")
         last = cmd
     return segs
+
+def arc_to_curves(x1, y1, rx, ry, phi_deg, large, sweep, x2, y2):
+    """Elliptischer Bogen (SVG-Endpunktform) → kubische Bézier-Segmente.
+    Umrechnung in die Mittelpunktform nach SVG 1.1, Anhang F.6."""
+    if (x1, y1) == (x2, y2):
+        return []
+    if rx == 0 or ry == 0:
+        return [('L', x2, y2)]
+    rx, ry = abs(rx), abs(ry)
+    phi = math.radians(phi_deg)
+    cp, sp = math.cos(phi), math.sin(phi)
+    dx, dy = (x1 - x2) / 2, (y1 - y2) / 2
+    x1p = cp * dx + sp * dy
+    y1p = -sp * dx + cp * dy
+    lam = (x1p ** 2) / (rx ** 2) + (y1p ** 2) / (ry ** 2)
+    if lam > 1:
+        rx *= math.sqrt(lam); ry *= math.sqrt(lam)
+    num = rx*rx*ry*ry - rx*rx*y1p*y1p - ry*ry*x1p*x1p
+    den = rx*rx*y1p*y1p + ry*ry*x1p*x1p
+    co = math.sqrt(max(0.0, num / den)) if den else 0.0
+    if large == sweep:
+        co = -co
+    cxp = co * rx * y1p / ry
+    cyp = -co * ry * x1p / rx
+    ccx = cp * cxp - sp * cyp + (x1 + x2) / 2
+    ccy = sp * cxp + cp * cyp + (y1 + y2) / 2
+    def ang(ux, uy, vx, vy):
+        a = math.atan2(ux * vy - uy * vx, ux * vx + uy * vy)
+        return a
+    t1 = ang(1, 0, (x1p - cxp) / rx, (y1p - cyp) / ry)
+    dt = ang((x1p - cxp) / rx, (y1p - cyp) / ry, (-x1p - cxp) / rx, (-y1p - cyp) / ry)
+    if not sweep and dt > 0:
+        dt -= 2 * math.pi
+    elif sweep and dt < 0:
+        dt += 2 * math.pi
+    n = max(1, math.ceil(abs(dt) / (math.pi / 2)))
+    step = dt / n
+    k = 4 / 3 * math.tan(step / 4)
+    out = []
+    def point(t):
+        x = rx * math.cos(t); y = ry * math.sin(t)
+        return (cp * x - sp * y + ccx, sp * x + cp * y + ccy)
+    def deriv(t):
+        x = -rx * math.sin(t); y = ry * math.cos(t)
+        return (cp * x - sp * y, sp * x + cp * y)
+    t = t1
+    for _ in range(n):
+        p0 = point(t); d0 = deriv(t)
+        p3 = point(t + step); d3 = deriv(t + step)
+        c1 = (p0[0] + k * d0[0], p0[1] + k * d0[1])
+        c2 = (p3[0] - k * d3[0], p3[1] - k * d3[1])
+        out.append(('C', c1[0], c1[1], c2[0], c2[1], p3[0], p3[1]))
+        t += step
+    # Endpunkt exakt setzen (Rundungsfehler)
+    last = out[-1]
+    out[-1] = ('C', last[1], last[2], last[3], last[4], x2, y2)
+    return out
 
 def bbox(seglists):
     xs, ys = [], []

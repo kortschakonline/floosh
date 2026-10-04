@@ -99,6 +99,10 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   daneben, Escape oder erneutem Klick schließt. Auch das Einstellungsfenster
   gehört jetzt der App (`SettingsWindowController`) — `showSettingsWindow:`
   meldet in dieser Konstellation Erfolg, öffnet aber nichts.
+- Farben & Icons (`CardTheme.swift`, 1.11): `ThemeSlot` je Kachel-Familie mit
+  Grundfarbe (Hex in `theme.color.*`) und Icon (`theme.icon.*`, `CardGlyph`:
+  floosh-Logo, SF Symbol oder Streamline-Icon). Die Zweitfarbe (Schreiben, GPU,
+  Upload) ist eine hellere Mischung der Grundfarbe (`blended`, läuft ab macOS 14).
 - floosh-Island (`IslandWindow.swift`, `IslandView.swift`, `NowPlaying.swift`,
   1.10): randloses `NSPanel` über der Menüleiste (Level `mainMenu + 3`), oben
   mittig auf dem Bildschirm mit Notch (`auxiliaryTopLeft/RightArea`), sonst als
@@ -256,6 +260,10 @@ Material-Optik (`GlassCompat.swift`). Kein Sandbox-Entitlement nötig.
 - `BrandLogos.swift` wurde aus den SVGs konvertiert (SVG-Pfaddaten →
   SwiftUI-`Path`); bei Logo-Änderungen die SVGs austauschen und neu
   konvertieren, nicht die Pfade von Hand editieren.
+
+## Icons von Dritten
+
+Einige Kachel-Icons stammen aus „Core Solid – Free" von [Streamline](https://streamlinehq.com), lizenziert unter [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Die SVG-Quellen liegen in `Logo & Icon Source/streamline-core-solid-free/`. Sie sind mit `Tools/svg2swift.py` (jetzt auch mit SVG-Bögen) in Swift-Pfade umgewandelt (`StreamlineIcons.swift`).
 
 ## Lizenz
 

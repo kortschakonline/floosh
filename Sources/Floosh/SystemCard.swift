@@ -9,7 +9,9 @@ struct SystemCard: View {
     @Bindable var clean: CleanScreen = .shared
     var tools: ToolSettings = .shared
 
-    static let tint = Color(red: 0.68, green: 0.48, blue: 1.0) // Violett
+    /// Türkis (einstellbar unter Anzeige → Farben & Icons).
+    @MainActor static var tint: Color { CardTheme.shared.color(.system) }
+    @MainActor static var secondaryTint: Color { CardTheme.shared.secondary(.system) }
 
     private var size: CardSize { engine.cardSize }
 
@@ -81,7 +83,7 @@ struct SystemCard: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
-            CardIcon(symbol: "cpu", tint: Self.tint, size: size)
+            CardIcon(glyph: CardTheme.shared.glyph(.system), tint: Self.tint, size: size)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text("System")
@@ -105,7 +107,7 @@ struct SystemCard: View {
         HStack(spacing: 4) {
             Text(label)
                 .font(.system(size: size.glyphFont, weight: .bold, design: .rounded))
-                .foregroundStyle(Self.tint.opacity(label == "GPU" ? 0.55 : 1))
+                .foregroundStyle(label == "GPU" ? Self.secondaryTint : Self.tint)
             Text(temp.map { "\(Int($0.rounded())) °C" } ?? "–")
                 .font(.system(size: size.valueFont, weight: .bold, design: .rounded))
                 .monospacedDigit()
@@ -117,7 +119,7 @@ struct SystemCard: View {
     private var usageRows: some View {
         VStack(spacing: size == .large ? 8 : 6) {
             usageRow(label: "CPU", value: engine.system.cpuUsage, color: Self.tint)
-            usageRow(label: "GPU", value: engine.system.gpuUsage, color: Self.tint.opacity(0.55))
+            usageRow(label: "GPU", value: engine.system.gpuUsage, color: Self.secondaryTint)
         }
     }
 

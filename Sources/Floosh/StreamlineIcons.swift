@@ -1,0 +1,520 @@
+import SwiftUI
+
+// Icons: „Core Solid – Free" von Streamline (https://streamlinehq.com),
+// lizenziert unter Creative Commons BY 4.0. SVG-Quellen in
+// `Logo & Icon Source/streamline-core-solid-free/`, konvertiert mit
+// `Tools/svg2swift.py` (jetzt mit Bogen-Unterstützung).
+
+/// Die eingebauten Streamline-Icons.
+enum StreamlineIcon: String, CaseIterable, Identifiable {
+    case computerChip1
+    case computerChip2
+    case hardDisk
+    case hardDrive1
+    case inboxTray1
+    case inboxTray2
+    case network
+    case usbDrive
+    case web
+    case wifiAntenna
+
+    var id: String { rawValue }
+}
+
+/// Pfade im 14×14-Raster der Core-Icons (generiert).
+enum StreamlinePaths {
+    // MARK: slComputerChip1 — Designbox x:0.11 y:0.11 w:13.79 h:13.79
+    static let slComputerChip1Design = CGRect(x: 0.107, y: 0.107, width: 13.785, height: 13.785)
+
+    static func slComputerChip1Fill(t: (CGPoint) -> CGPoint) -> Path {
+        var p = Path()
+        p.move(to: t(CGPoint(x: 5.86, y: 0.857)))
+        p.addCurve(to: t(CGPoint(x: 5.11, y: 0.107)), control1: t(CGPoint(x: 5.86, y: 0.443)), control2: t(CGPoint(x: 5.524, y: 0.107)))
+        p.addCurve(to: t(CGPoint(x: 4.36, y: 0.857)), control1: t(CGPoint(x: 4.696, y: 0.107)), control2: t(CGPoint(x: 4.36, y: 0.443)))
+        p.addLine(to: t(CGPoint(x: 4.36, y: 2.5)))
+        p.addLine(to: t(CGPoint(x: 4, y: 2.5)))
+        p.addCurve(to: t(CGPoint(x: 2.5, y: 4)), control1: t(CGPoint(x: 3.172, y: 2.5)), control2: t(CGPoint(x: 2.5, y: 3.172)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 4.36)))
+        p.addLine(to: t(CGPoint(x: 0.857, y: 4.36)))
+        p.addCurve(to: t(CGPoint(x: 0.107, y: 5.11)), control1: t(CGPoint(x: 0.443, y: 4.36)), control2: t(CGPoint(x: 0.107, y: 4.696)))
+        p.addCurve(to: t(CGPoint(x: 0.857, y: 5.86)), control1: t(CGPoint(x: 0.107, y: 5.524)), control2: t(CGPoint(x: 0.443, y: 5.86)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 5.86)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 8.14)))
+        p.addLine(to: t(CGPoint(x: 0.857, y: 8.14)))
+        p.addCurve(to: t(CGPoint(x: 0.107, y: 8.89)), control1: t(CGPoint(x: 0.443, y: 8.14)), control2: t(CGPoint(x: 0.107, y: 8.476)))
+        p.addCurve(to: t(CGPoint(x: 0.857, y: 9.64)), control1: t(CGPoint(x: 0.107, y: 9.304)), control2: t(CGPoint(x: 0.443, y: 9.64)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 9.64)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 10)))
+        p.addCurve(to: t(CGPoint(x: 4, y: 11.5)), control1: t(CGPoint(x: 2.5, y: 10.828)), control2: t(CGPoint(x: 3.172, y: 11.5)))
+        p.addLine(to: t(CGPoint(x: 4.36, y: 11.5)))
+        p.addLine(to: t(CGPoint(x: 4.36, y: 13.143)))
+        p.addCurve(to: t(CGPoint(x: 5.11, y: 13.893)), control1: t(CGPoint(x: 4.36, y: 13.557)), control2: t(CGPoint(x: 4.696, y: 13.893)))
+        p.addCurve(to: t(CGPoint(x: 5.86, y: 13.143)), control1: t(CGPoint(x: 5.524, y: 13.893)), control2: t(CGPoint(x: 5.86, y: 13.557)))
+        p.addLine(to: t(CGPoint(x: 5.86, y: 11.5)))
+        p.addLine(to: t(CGPoint(x: 8.14, y: 11.5)))
+        p.addLine(to: t(CGPoint(x: 8.14, y: 13.143)))
+        p.addCurve(to: t(CGPoint(x: 8.89, y: 13.893)), control1: t(CGPoint(x: 8.14, y: 13.557)), control2: t(CGPoint(x: 8.476, y: 13.893)))
+        p.addCurve(to: t(CGPoint(x: 9.64, y: 13.143)), control1: t(CGPoint(x: 9.304, y: 13.893)), control2: t(CGPoint(x: 9.64, y: 13.557)))
+        p.addLine(to: t(CGPoint(x: 9.64, y: 11.5)))
+        p.addLine(to: t(CGPoint(x: 10, y: 11.5)))
+        p.addCurve(to: t(CGPoint(x: 11.5, y: 10)), control1: t(CGPoint(x: 10.828, y: 11.5)), control2: t(CGPoint(x: 11.5, y: 10.828)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 9.64)))
+        p.addLine(to: t(CGPoint(x: 13.143, y: 9.64)))
+        p.addCurve(to: t(CGPoint(x: 13.893, y: 8.89)), control1: t(CGPoint(x: 13.557, y: 9.64)), control2: t(CGPoint(x: 13.893, y: 9.304)))
+        p.addCurve(to: t(CGPoint(x: 13.143, y: 8.14)), control1: t(CGPoint(x: 13.893, y: 8.476)), control2: t(CGPoint(x: 13.557, y: 8.14)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 8.14)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 5.86)))
+        p.addLine(to: t(CGPoint(x: 13.143, y: 5.86)))
+        p.addCurve(to: t(CGPoint(x: 13.893, y: 5.11)), control1: t(CGPoint(x: 13.557, y: 5.86)), control2: t(CGPoint(x: 13.893, y: 5.524)))
+        p.addCurve(to: t(CGPoint(x: 13.143, y: 4.36)), control1: t(CGPoint(x: 13.893, y: 4.696)), control2: t(CGPoint(x: 13.557, y: 4.36)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 4.36)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 4)))
+        p.addCurve(to: t(CGPoint(x: 10, y: 2.5)), control1: t(CGPoint(x: 11.5, y: 3.172)), control2: t(CGPoint(x: 10.828, y: 2.5)))
+        p.addLine(to: t(CGPoint(x: 9.64, y: 2.5)))
+        p.addLine(to: t(CGPoint(x: 9.64, y: 0.857)))
+        p.addCurve(to: t(CGPoint(x: 8.89, y: 0.107)), control1: t(CGPoint(x: 9.64, y: 0.443)), control2: t(CGPoint(x: 9.304, y: 0.107)))
+        p.addCurve(to: t(CGPoint(x: 8.14, y: 0.857)), control1: t(CGPoint(x: 8.476, y: 0.107)), control2: t(CGPoint(x: 8.14, y: 0.443)))
+        p.addLine(to: t(CGPoint(x: 8.14, y: 2.5)))
+        p.addLine(to: t(CGPoint(x: 5.86, y: 2.5)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 7.409, y: 8.375)))
+        p.addCurve(to: t(CGPoint(x: 6.784, y: 9)), control1: t(CGPoint(x: 7.064, y: 8.375)), control2: t(CGPoint(x: 6.784, y: 8.655)))
+        p.addCurve(to: t(CGPoint(x: 7.409, y: 9.625)), control1: t(CGPoint(x: 6.784, y: 9.345)), control2: t(CGPoint(x: 7.064, y: 9.625)))
+        p.addLine(to: t(CGPoint(x: 9.409, y: 9.625)))
+        p.addCurve(to: t(CGPoint(x: 10.034, y: 9)), control1: t(CGPoint(x: 9.754, y: 9.625)), control2: t(CGPoint(x: 10.034, y: 9.345)))
+        p.addCurve(to: t(CGPoint(x: 9.409, y: 8.375)), control1: t(CGPoint(x: 10.034, y: 8.655)), control2: t(CGPoint(x: 9.754, y: 8.375)))
+        p.closeSubpath()
+        return p
+    }
+
+    // MARK: slComputerChip2 — Designbox x:0.06 y:0.00 w:13.87 h:14.00
+    static let slComputerChip2Design = CGRect(x: 0.063, y: 0.000, width: 13.874, height: 14.000)
+
+    static func slComputerChip2Fill(t: (CGPoint) -> CGPoint) -> Path {
+        var p = Path()
+        p.move(to: t(CGPoint(x: 2.5, y: 1.5)))
+        p.addCurve(to: t(CGPoint(x: 4, y: 0)), control1: t(CGPoint(x: 2.5, y: 0.672)), control2: t(CGPoint(x: 3.172, y: 0)))
+        p.addLine(to: t(CGPoint(x: 10, y: 0)))
+        p.addCurve(to: t(CGPoint(x: 11.5, y: 1.5)), control1: t(CGPoint(x: 10.828, y: 0)), control2: t(CGPoint(x: 11.5, y: 0.672)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 2.335)))
+        p.addLine(to: t(CGPoint(x: 13.187, y: 2.335)))
+        p.addCurve(to: t(CGPoint(x: 13.937, y: 3.085)), control1: t(CGPoint(x: 13.601, y: 2.335)), control2: t(CGPoint(x: 13.937, y: 2.671)))
+        p.addCurve(to: t(CGPoint(x: 13.187, y: 3.835)), control1: t(CGPoint(x: 13.937, y: 3.499)), control2: t(CGPoint(x: 13.601, y: 3.835)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 3.835)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 6.25)))
+        p.addLine(to: t(CGPoint(x: 13.187, y: 6.25)))
+        p.addCurve(to: t(CGPoint(x: 13.937, y: 7)), control1: t(CGPoint(x: 13.601, y: 6.25)), control2: t(CGPoint(x: 13.937, y: 6.586)))
+        p.addCurve(to: t(CGPoint(x: 13.187, y: 7.75)), control1: t(CGPoint(x: 13.937, y: 7.414)), control2: t(CGPoint(x: 13.601, y: 7.75)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 7.75)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 10.165)))
+        p.addLine(to: t(CGPoint(x: 13.187, y: 10.165)))
+        p.addCurve(to: t(CGPoint(x: 13.937, y: 10.915)), control1: t(CGPoint(x: 13.601, y: 10.165)), control2: t(CGPoint(x: 13.937, y: 10.501)))
+        p.addCurve(to: t(CGPoint(x: 13.187, y: 11.665)), control1: t(CGPoint(x: 13.937, y: 11.329)), control2: t(CGPoint(x: 13.601, y: 11.665)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 11.665)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 12.5)))
+        p.addCurve(to: t(CGPoint(x: 10, y: 14)), control1: t(CGPoint(x: 11.5, y: 13.328)), control2: t(CGPoint(x: 10.828, y: 14)))
+        p.addLine(to: t(CGPoint(x: 4, y: 14)))
+        p.addCurve(to: t(CGPoint(x: 2.5, y: 12.5)), control1: t(CGPoint(x: 3.172, y: 14)), control2: t(CGPoint(x: 2.5, y: 13.328)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 11.665)))
+        p.addLine(to: t(CGPoint(x: 0.813, y: 11.665)))
+        p.addCurve(to: t(CGPoint(x: 0.063, y: 10.915)), control1: t(CGPoint(x: 0.399, y: 11.665)), control2: t(CGPoint(x: 0.063, y: 11.329)))
+        p.addCurve(to: t(CGPoint(x: 0.813, y: 10.165)), control1: t(CGPoint(x: 0.063, y: 10.501)), control2: t(CGPoint(x: 0.399, y: 10.165)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 10.165)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 7.75)))
+        p.addLine(to: t(CGPoint(x: 0.813, y: 7.75)))
+        p.addCurve(to: t(CGPoint(x: 0.063, y: 7)), control1: t(CGPoint(x: 0.399, y: 7.75)), control2: t(CGPoint(x: 0.063, y: 7.414)))
+        p.addCurve(to: t(CGPoint(x: 0.813, y: 6.25)), control1: t(CGPoint(x: 0.063, y: 6.586)), control2: t(CGPoint(x: 0.399, y: 6.25)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 6.25)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 3.835)))
+        p.addLine(to: t(CGPoint(x: 0.813, y: 3.835)))
+        p.addCurve(to: t(CGPoint(x: 0.063, y: 3.085)), control1: t(CGPoint(x: 0.399, y: 3.835)), control2: t(CGPoint(x: 0.063, y: 3.499)))
+        p.addCurve(to: t(CGPoint(x: 0.813, y: 2.335)), control1: t(CGPoint(x: 0.063, y: 2.671)), control2: t(CGPoint(x: 0.399, y: 2.335)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 2.335)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 7.348, y: 11.182)))
+        p.addCurve(to: t(CGPoint(x: 6.723, y: 11.807)), control1: t(CGPoint(x: 7.003, y: 11.182)), control2: t(CGPoint(x: 6.723, y: 11.462)))
+        p.addCurve(to: t(CGPoint(x: 7.348, y: 12.432)), control1: t(CGPoint(x: 6.723, y: 12.153)), control2: t(CGPoint(x: 7.003, y: 12.432)))
+        p.addLine(to: t(CGPoint(x: 9.348, y: 12.432)))
+        p.addCurve(to: t(CGPoint(x: 9.973, y: 11.807)), control1: t(CGPoint(x: 9.693, y: 12.432)), control2: t(CGPoint(x: 9.973, y: 12.153)))
+        p.addCurve(to: t(CGPoint(x: 9.348, y: 11.182)), control1: t(CGPoint(x: 9.973, y: 11.462)), control2: t(CGPoint(x: 9.693, y: 11.182)))
+        p.closeSubpath()
+        return p
+    }
+
+    // MARK: slHardDisk — Designbox x:1.00 y:0.00 w:12.00 h:14.00
+    static let slHardDiskDesign = CGRect(x: 1.000, y: 0.000, width: 12.000, height: 14.000)
+
+    static func slHardDiskFill(t: (CGPoint) -> CGPoint) -> Path {
+        var p = Path()
+        p.move(to: t(CGPoint(x: 1, y: 1.5)))
+        p.addCurve(to: t(CGPoint(x: 2.5, y: 0)), control1: t(CGPoint(x: 1, y: 0.672)), control2: t(CGPoint(x: 1.672, y: 0)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 0)))
+        p.addCurve(to: t(CGPoint(x: 13, y: 1.5)), control1: t(CGPoint(x: 12.328, y: 0)), control2: t(CGPoint(x: 13, y: 0.672)))
+        p.addLine(to: t(CGPoint(x: 13, y: 12.5)))
+        p.addCurve(to: t(CGPoint(x: 11.5, y: 14)), control1: t(CGPoint(x: 13, y: 13.328)), control2: t(CGPoint(x: 12.328, y: 14)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 14)))
+        p.addCurve(to: t(CGPoint(x: 1, y: 12.5)), control1: t(CGPoint(x: 1.672, y: 14)), control2: t(CGPoint(x: 1, y: 13.328)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 6.991, y: 8.192)))
+        p.addCurve(to: t(CGPoint(x: 6.799, y: 7.33)), control1: t(CGPoint(x: 7.176, y: 7.901)), control2: t(CGPoint(x: 7.091, y: 7.515)))
+        p.addCurve(to: t(CGPoint(x: 6.214, y: 7.284)), control1: t(CGPoint(x: 6.617, y: 7.214)), control2: t(CGPoint(x: 6.398, y: 7.204)))
+        p.addCurve(to: t(CGPoint(x: 6.338, y: 7.245)), control1: t(CGPoint(x: 6.254, y: 7.267)), control2: t(CGPoint(x: 6.295, y: 7.253)))
+        p.addCurve(to: t(CGPoint(x: 5.943, y: 7.511)), control1: t(CGPoint(x: 6.191, y: 7.268)), control2: t(CGPoint(x: 6.049, y: 7.35)))
+        p.addCurve(to: t(CGPoint(x: 5.937, y: 7.521)), control1: t(CGPoint(x: 5.941, y: 7.514)), control2: t(CGPoint(x: 5.939, y: 7.518)))
+        p.addLine(to: t(CGPoint(x: 4.187, y: 10.271)))
+        p.addCurve(to: t(CGPoint(x: 4.378, y: 11.134)), control1: t(CGPoint(x: 4.001, y: 10.563)), control2: t(CGPoint(x: 4.087, y: 10.949)))
+        p.addCurve(to: t(CGPoint(x: 5.241, y: 10.942)), control1: t(CGPoint(x: 4.669, y: 11.319)), control2: t(CGPoint(x: 5.056, y: 11.234)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 7.249, y: 11.606)))
+        p.addCurve(to: t(CGPoint(x: 7.874, y: 10.981)), control1: t(CGPoint(x: 7.249, y: 11.261)), control2: t(CGPoint(x: 7.528, y: 10.981)))
+        p.addLine(to: t(CGPoint(x: 10.374, y: 10.981)))
+        p.addCurve(to: t(CGPoint(x: 10.999, y: 11.606)), control1: t(CGPoint(x: 10.719, y: 10.981)), control2: t(CGPoint(x: 10.999, y: 11.261)))
+        p.addCurve(to: t(CGPoint(x: 10.374, y: 12.231)), control1: t(CGPoint(x: 10.999, y: 11.951)), control2: t(CGPoint(x: 10.719, y: 12.231)))
+        p.addLine(to: t(CGPoint(x: 7.874, y: 12.231)))
+        p.addCurve(to: t(CGPoint(x: 7.249, y: 11.606)), control1: t(CGPoint(x: 7.528, y: 12.231)), control2: t(CGPoint(x: 7.249, y: 11.951)))
+        p.move(to: t(CGPoint(x: 6.99, y: 1.897)))
+        p.addCurve(to: t(CGPoint(x: 3.115, y: 5.772)), control1: t(CGPoint(x: 4.85, y: 1.897)), control2: t(CGPoint(x: 3.115, y: 3.632)))
+        p.addCurve(to: t(CGPoint(x: 4, y: 8.237)), control1: t(CGPoint(x: 3.115, y: 6.708)), control2: t(CGPoint(x: 3.447, y: 7.567)))
+        p.addLine(to: t(CGPoint(x: 4.882, y: 6.85)))
+        p.addCurve(to: t(CGPoint(x: 6.166, y: 6.007)), control1: t(CGPoint(x: 5.18, y: 6.382)), control2: t(CGPoint(x: 5.643, y: 6.082)))
+        p.addCurve(to: t(CGPoint(x: 7.46, y: 6.292)), control1: t(CGPoint(x: 6.656, y: 5.936)), control2: t(CGPoint(x: 7.112, y: 6.071)))
+        p.addCurve(to: t(CGPoint(x: 8.266, y: 7.343)), control1: t(CGPoint(x: 7.807, y: 6.513)), control2: t(CGPoint(x: 8.123, y: 6.87)))
+        p.addCurve(to: t(CGPoint(x: 8.046, y: 8.864)), control1: t(CGPoint(x: 8.419, y: 7.849)), control2: t(CGPoint(x: 8.344, y: 8.395)))
+        p.addLine(to: t(CGPoint(x: 7.575, y: 9.604)))
+        p.addCurve(to: t(CGPoint(x: 10.865, y: 5.772)), control1: t(CGPoint(x: 9.438, y: 9.322)), control2: t(CGPoint(x: 10.865, y: 7.714)))
+        p.addCurve(to: t(CGPoint(x: 6.99, y: 1.897)), control1: t(CGPoint(x: 10.865, y: 3.632)), control2: t(CGPoint(x: 9.13, y: 1.897)))
+        p.move(to: t(CGPoint(x: 7.072, y: 7.712)))
+        p.addCurve(to: t(CGPoint(x: 6.991, y: 8.192)), control1: t(CGPoint(x: 7.11, y: 7.871)), control2: t(CGPoint(x: 7.086, y: 8.044)))
+        p.addCurve(to: t(CGPoint(x: 7.072, y: 7.712)), control1: t(CGPoint(x: 7.098, y: 8.025)), control2: t(CGPoint(x: 7.114, y: 7.858)))
+        return p
+    }
+
+    // MARK: slHardDrive1 — Designbox x:0.00 y:-0.00 w:14.00 h:13.73
+    static let slHardDrive1Design = CGRect(x: 0.000, y: -0.000, width: 14.000, height: 13.731)
+
+    static func slHardDrive1Fill(t: (CGPoint) -> CGPoint) -> Path {
+        var p = Path()
+        p.move(to: t(CGPoint(x: 0.588, y: 6.071)))
+        p.addCurve(to: t(CGPoint(x: 1.077, y: 6.019)), control1: t(CGPoint(x: 0.746, y: 6.037)), control2: t(CGPoint(x: 0.909, y: 6.019)))
+        p.addLine(to: t(CGPoint(x: 12.923, y: 6.019)))
+        p.addCurve(to: t(CGPoint(x: 13.444, y: 6.078)), control1: t(CGPoint(x: 13.102, y: 6.019)), control2: t(CGPoint(x: 13.276, y: 6.039)))
+        p.addLine(to: t(CGPoint(x: 12.186, y: 1.162)))
+        p.addCurve(to: t(CGPoint(x: 11.647, y: 0.317)), control1: t(CGPoint(x: 12.109, y: 0.827)), control2: t(CGPoint(x: 11.918, y: 0.529)))
+        p.addCurve(to: t(CGPoint(x: 10.694, y: -0)), control1: t(CGPoint(x: 11.375, y: 0.105)), control2: t(CGPoint(x: 11.039, y: -0.007)))
+        p.addLine(to: t(CGPoint(x: 3.3, y: -0)))
+        p.addLine(to: t(CGPoint(x: 3.3, y: -0)))
+        p.addLine(to: t(CGPoint(x: 3.297, y: 0)))
+        p.addCurve(to: t(CGPoint(x: 2.366, y: 0.331)), control1: t(CGPoint(x: 2.958, y: 0.002)), control2: t(CGPoint(x: 2.63, y: 0.119)))
+        p.addCurve(to: t(CGPoint(x: 1.844, y: 1.162)), control1: t(CGPoint(x: 2.103, y: 0.542)), control2: t(CGPoint(x: 1.92, y: 0.835)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 12.923, y: 7.269)))
+        p.addLine(to: t(CGPoint(x: 1.077, y: 7.269)))
+        p.addCurve(to: t(CGPoint(x: 0, y: 8.346)), control1: t(CGPoint(x: 0.482, y: 7.269)), control2: t(CGPoint(x: 0, y: 7.751)))
+        p.addLine(to: t(CGPoint(x: 0, y: 12.654)))
+        p.addCurve(to: t(CGPoint(x: 1.077, y: 13.731)), control1: t(CGPoint(x: 0, y: 13.249)), control2: t(CGPoint(x: 0.482, y: 13.731)))
+        p.addLine(to: t(CGPoint(x: 12.923, y: 13.731)))
+        p.addCurve(to: t(CGPoint(x: 14, y: 12.654)), control1: t(CGPoint(x: 13.518, y: 13.731)), control2: t(CGPoint(x: 14, y: 13.249)))
+        p.addLine(to: t(CGPoint(x: 14, y: 8.346)))
+        p.addCurve(to: t(CGPoint(x: 12.923, y: 7.269)), control1: t(CGPoint(x: 14, y: 7.751)), control2: t(CGPoint(x: 13.518, y: 7.269)))
+        p.move(to: t(CGPoint(x: 3.5, y: 9.875)))
+        p.addCurve(to: t(CGPoint(x: 2.875, y: 10.5)), control1: t(CGPoint(x: 3.155, y: 9.875)), control2: t(CGPoint(x: 2.875, y: 10.155)))
+        p.addCurve(to: t(CGPoint(x: 3.5, y: 11.125)), control1: t(CGPoint(x: 2.875, y: 10.845)), control2: t(CGPoint(x: 3.155, y: 11.125)))
+        p.addLine(to: t(CGPoint(x: 6.5, y: 11.125)))
+        p.addCurve(to: t(CGPoint(x: 7.125, y: 10.5)), control1: t(CGPoint(x: 6.845, y: 11.125)), control2: t(CGPoint(x: 7.125, y: 10.845)))
+        p.addCurve(to: t(CGPoint(x: 6.5, y: 9.875)), control1: t(CGPoint(x: 7.125, y: 10.155)), control2: t(CGPoint(x: 6.845, y: 9.875)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 9.503, y: 10.5)))
+        p.addCurve(to: t(CGPoint(x: 10.5, y: 9.503)), control1: t(CGPoint(x: 9.503, y: 9.949)), control2: t(CGPoint(x: 9.949, y: 9.503)))
+        p.addCurve(to: t(CGPoint(x: 11.497, y: 10.5)), control1: t(CGPoint(x: 11.051, y: 9.503)), control2: t(CGPoint(x: 11.497, y: 9.949)))
+        p.addCurve(to: t(CGPoint(x: 10.5, y: 11.497)), control1: t(CGPoint(x: 11.497, y: 11.051)), control2: t(CGPoint(x: 11.051, y: 11.497)))
+        p.addCurve(to: t(CGPoint(x: 9.503, y: 10.5)), control1: t(CGPoint(x: 9.949, y: 11.497)), control2: t(CGPoint(x: 9.503, y: 11.051)))
+        return p
+    }
+
+    // MARK: slInboxTray1 — Designbox x:0.00 y:0.01 w:14.00 h:13.99
+    static let slInboxTray1Design = CGRect(x: 0.000, y: 0.010, width: 14.000, height: 13.990)
+
+    static func slInboxTray1Fill(t: (CGPoint) -> CGPoint) -> Path {
+        var p = Path()
+        p.move(to: t(CGPoint(x: 7.75, y: 0.76)))
+        p.addCurve(to: t(CGPoint(x: 7, y: 0.01)), control1: t(CGPoint(x: 7.75, y: 0.346)), control2: t(CGPoint(x: 7.414, y: 0.01)))
+        p.addCurve(to: t(CGPoint(x: 6.25, y: 0.76)), control1: t(CGPoint(x: 6.586, y: 0.01)), control2: t(CGPoint(x: 6.25, y: 0.346)))
+        p.addLine(to: t(CGPoint(x: 6.25, y: 3.51)))
+        p.addLine(to: t(CGPoint(x: 4.5, y: 3.51)))
+        p.addCurve(to: t(CGPoint(x: 3.808, y: 3.973)), control1: t(CGPoint(x: 4.197, y: 3.51)), control2: t(CGPoint(x: 3.924, y: 3.693)))
+        p.addCurve(to: t(CGPoint(x: 3.97, y: 4.79)), control1: t(CGPoint(x: 3.692, y: 4.253)), control2: t(CGPoint(x: 3.756, y: 4.576)))
+        p.addLine(to: t(CGPoint(x: 6.47, y: 7.29)))
+        p.addCurve(to: t(CGPoint(x: 7, y: 7.51)), control1: t(CGPoint(x: 6.61, y: 7.431)), control2: t(CGPoint(x: 6.801, y: 7.51)))
+        p.addCurve(to: t(CGPoint(x: 7.53, y: 7.29)), control1: t(CGPoint(x: 7.199, y: 7.51)), control2: t(CGPoint(x: 7.39, y: 7.431)))
+        p.addLine(to: t(CGPoint(x: 10.03, y: 4.79)))
+        p.addCurve(to: t(CGPoint(x: 10.192, y: 3.973)), control1: t(CGPoint(x: 10.244, y: 4.576)), control2: t(CGPoint(x: 10.308, y: 4.253)))
+        p.addCurve(to: t(CGPoint(x: 9.5, y: 3.51)), control1: t(CGPoint(x: 10.076, y: 3.693)), control2: t(CGPoint(x: 9.803, y: 3.51)))
+        p.addLine(to: t(CGPoint(x: 7.75, y: 3.51)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 0.5, y: 8.33)))
+        p.addCurve(to: t(CGPoint(x: 0, y: 8.83)), control1: t(CGPoint(x: 0.224, y: 8.33)), control2: t(CGPoint(x: 0, y: 8.554)))
+        p.addLine(to: t(CGPoint(x: 0, y: 12.5)))
+        p.addCurve(to: t(CGPoint(x: 1.5, y: 14)), control1: t(CGPoint(x: 0, y: 13.328)), control2: t(CGPoint(x: 0.672, y: 14)))
+        p.addLine(to: t(CGPoint(x: 12.5, y: 14)))
+        p.addCurve(to: t(CGPoint(x: 14, y: 12.5)), control1: t(CGPoint(x: 13.328, y: 14)), control2: t(CGPoint(x: 14, y: 13.328)))
+        p.addLine(to: t(CGPoint(x: 14, y: 8.83)))
+        p.addCurve(to: t(CGPoint(x: 13.5, y: 8.33)), control1: t(CGPoint(x: 14, y: 8.554)), control2: t(CGPoint(x: 13.776, y: 8.33)))
+        p.addLine(to: t(CGPoint(x: 10.527, y: 8.33)))
+        p.addCurve(to: t(CGPoint(x: 9.027, y: 9.83)), control1: t(CGPoint(x: 9.699, y: 8.33)), control2: t(CGPoint(x: 9.027, y: 9.002)))
+        p.addCurve(to: t(CGPoint(x: 6.997, y: 11.555)), control1: t(CGPoint(x: 9.027, y: 10.804)), control2: t(CGPoint(x: 8.051, y: 11.562)))
+        p.addCurve(to: t(CGPoint(x: 5.027, y: 9.83)), control1: t(CGPoint(x: 5.973, y: 11.548)), control2: t(CGPoint(x: 5.027, y: 10.787)))
+        p.addCurve(to: t(CGPoint(x: 3.527, y: 8.33)), control1: t(CGPoint(x: 5.027, y: 9.002)), control2: t(CGPoint(x: 4.355, y: 8.33)))
+        p.closeSubpath()
+        return p
+    }
+
+    // MARK: slInboxTray2 — Designbox x:0.00 y:0.01 w:14.00 h:13.99
+    static let slInboxTray2Design = CGRect(x: 0.000, y: 0.010, width: 14.000, height: 13.990)
+
+    static func slInboxTray2Fill(t: (CGPoint) -> CGPoint) -> Path {
+        var p = Path()
+        p.move(to: t(CGPoint(x: 10.193, y: 3.546)))
+        p.addCurve(to: t(CGPoint(x: 9.5, y: 4.009)), control1: t(CGPoint(x: 10.077, y: 3.826)), control2: t(CGPoint(x: 9.803, y: 4.009)))
+        p.addLine(to: t(CGPoint(x: 7.75, y: 4.009)))
+        p.addLine(to: t(CGPoint(x: 7.75, y: 6.759)))
+        p.addCurve(to: t(CGPoint(x: 7, y: 7.509)), control1: t(CGPoint(x: 7.75, y: 7.173)), control2: t(CGPoint(x: 7.414, y: 7.509)))
+        p.addCurve(to: t(CGPoint(x: 6.25, y: 6.759)), control1: t(CGPoint(x: 6.586, y: 7.509)), control2: t(CGPoint(x: 6.25, y: 7.173)))
+        p.addLine(to: t(CGPoint(x: 6.25, y: 4.009)))
+        p.addLine(to: t(CGPoint(x: 4.5, y: 4.009)))
+        p.addCurve(to: t(CGPoint(x: 3.808, y: 3.546)), control1: t(CGPoint(x: 4.197, y: 4.009)), control2: t(CGPoint(x: 3.924, y: 3.826)))
+        p.addCurve(to: t(CGPoint(x: 3.97, y: 2.729)), control1: t(CGPoint(x: 3.692, y: 3.266)), control2: t(CGPoint(x: 3.756, y: 2.943)))
+        p.addLine(to: t(CGPoint(x: 6.47, y: 0.229)))
+        p.addCurve(to: t(CGPoint(x: 7.53, y: 0.229)), control1: t(CGPoint(x: 6.763, y: -0.063)), control2: t(CGPoint(x: 7.237, y: -0.063)))
+        p.addLine(to: t(CGPoint(x: 10.03, y: 2.729)))
+        p.addCurve(to: t(CGPoint(x: 10.193, y: 3.546)), control1: t(CGPoint(x: 10.244, y: 2.943)), control2: t(CGPoint(x: 10.309, y: 3.266)))
+        p.move(to: t(CGPoint(x: 0.5, y: 8.33)))
+        p.addCurve(to: t(CGPoint(x: 0, y: 8.83)), control1: t(CGPoint(x: 0.224, y: 8.33)), control2: t(CGPoint(x: 0, y: 8.554)))
+        p.addLine(to: t(CGPoint(x: 0, y: 12.5)))
+        p.addCurve(to: t(CGPoint(x: 1.5, y: 14)), control1: t(CGPoint(x: 0, y: 13.328)), control2: t(CGPoint(x: 0.672, y: 14)))
+        p.addLine(to: t(CGPoint(x: 12.5, y: 14)))
+        p.addCurve(to: t(CGPoint(x: 14, y: 12.5)), control1: t(CGPoint(x: 13.328, y: 14)), control2: t(CGPoint(x: 14, y: 13.328)))
+        p.addLine(to: t(CGPoint(x: 14, y: 8.83)))
+        p.addCurve(to: t(CGPoint(x: 13.5, y: 8.33)), control1: t(CGPoint(x: 14, y: 8.554)), control2: t(CGPoint(x: 13.776, y: 8.33)))
+        p.addLine(to: t(CGPoint(x: 10.527, y: 8.33)))
+        p.addCurve(to: t(CGPoint(x: 9.027, y: 9.83)), control1: t(CGPoint(x: 9.699, y: 8.33)), control2: t(CGPoint(x: 9.027, y: 9.002)))
+        p.addCurve(to: t(CGPoint(x: 6.997, y: 11.555)), control1: t(CGPoint(x: 9.027, y: 10.804)), control2: t(CGPoint(x: 8.051, y: 11.562)))
+        p.addCurve(to: t(CGPoint(x: 5.027, y: 9.83)), control1: t(CGPoint(x: 5.973, y: 11.548)), control2: t(CGPoint(x: 5.027, y: 10.787)))
+        p.addCurve(to: t(CGPoint(x: 3.527, y: 8.33)), control1: t(CGPoint(x: 5.027, y: 9.002)), control2: t(CGPoint(x: 4.355, y: 8.33)))
+        p.closeSubpath()
+        return p
+    }
+
+    // MARK: slNetwork — Designbox x:1.25 y:0.07 w:11.50 h:13.88
+    static let slNetworkDesign = CGRect(x: 1.250, y: 0.067, width: 11.500, height: 13.879)
+
+    static func slNetworkFill(t: (CGPoint) -> CGPoint) -> Path {
+        var p = Path()
+        p.move(to: t(CGPoint(x: 1.805, y: 4.487)))
+        p.addCurve(to: t(CGPoint(x: 5.597, y: 0.07)), control1: t(CGPoint(x: 2.059, y: 2.383)), control2: t(CGPoint(x: 3.556, y: 0.639)))
+        p.addCurve(to: t(CGPoint(x: 4.115, y: 4.487)), control1: t(CGPoint(x: 4.698, y: 1.487)), control2: t(CGPoint(x: 4.192, y: 2.96)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 1.805, y: 5.737)))
+        p.addLine(to: t(CGPoint(x: 4.147, y: 5.737)))
+        p.addCurve(to: t(CGPoint(x: 5.757, y: 10.195)), control1: t(CGPoint(x: 4.297, y: 7.213)), control2: t(CGPoint(x: 4.84, y: 8.699)))
+        p.addCurve(to: t(CGPoint(x: 1.805, y: 5.737)), control1: t(CGPoint(x: 3.64, y: 9.676)), control2: t(CGPoint(x: 2.066, y: 7.901)))
+        p.move(to: t(CGPoint(x: 12.195, y: 5.737)))
+        p.addCurve(to: t(CGPoint(x: 8.274, y: 10.187)), control1: t(CGPoint(x: 11.935, y: 7.889)), control2: t(CGPoint(x: 10.376, y: 9.658)))
+        p.addCurve(to: t(CGPoint(x: 9.884, y: 5.737)), control1: t(CGPoint(x: 9.2, y: 8.716)), control2: t(CGPoint(x: 9.746, y: 7.231)))
+        p.addLine(to: t(CGPoint(x: 12.194, y: 5.737)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 7.01, y: 9.838)))
+        p.addCurve(to: t(CGPoint(x: 8.628, y: 5.737)), control1: t(CGPoint(x: 7.954, y: 8.431)), control2: t(CGPoint(x: 8.483, y: 7.065)))
+        p.addLine(to: t(CGPoint(x: 5.405, y: 5.737)))
+        p.addCurve(to: t(CGPoint(x: 7.01, y: 9.838)), control1: t(CGPoint(x: 5.561, y: 7.045)), control2: t(CGPoint(x: 6.083, y: 8.41)))
+        p.move(to: t(CGPoint(x: 5.367, y: 4.487)))
+        p.addLine(to: t(CGPoint(x: 8.65, y: 4.487)))
+        p.addCurve(to: t(CGPoint(x: 6.997, y: 0.23)), control1: t(CGPoint(x: 8.549, y: 3.079)), control2: t(CGPoint(x: 8.01, y: 1.662)))
+        p.addCurve(to: t(CGPoint(x: 5.367, y: 4.486)), control1: t(CGPoint(x: 5.987, y: 1.64)), control2: t(CGPoint(x: 5.453, y: 3.055)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 12.194, y: 4.487)))
+        p.addLine(to: t(CGPoint(x: 9.904, y: 4.487)))
+        p.addCurve(to: t(CGPoint(x: 8.39, y: 0.067)), control1: t(CGPoint(x: 9.81, y: 2.977)), control2: t(CGPoint(x: 9.298, y: 1.503)))
+        p.addCurve(to: t(CGPoint(x: 12.193, y: 4.487)), control1: t(CGPoint(x: 10.436, y: 0.633)), control2: t(CGPoint(x: 11.939, y: 2.379)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 6.25, y: 11.55)))
+        p.addLine(to: t(CGPoint(x: 6.25, y: 12.446)))
+        p.addLine(to: t(CGPoint(x: 2, y: 12.446)))
+        p.addCurve(to: t(CGPoint(x: 1.25, y: 13.196)), control1: t(CGPoint(x: 1.586, y: 12.446)), control2: t(CGPoint(x: 1.25, y: 12.782)))
+        p.addCurve(to: t(CGPoint(x: 2, y: 13.946)), control1: t(CGPoint(x: 1.25, y: 13.61)), control2: t(CGPoint(x: 1.586, y: 13.946)))
+        p.addLine(to: t(CGPoint(x: 12, y: 13.946)))
+        p.addCurve(to: t(CGPoint(x: 12.75, y: 13.196)), control1: t(CGPoint(x: 12.414, y: 13.946)), control2: t(CGPoint(x: 12.75, y: 13.61)))
+        p.addCurve(to: t(CGPoint(x: 12, y: 12.446)), control1: t(CGPoint(x: 12.75, y: 12.782)), control2: t(CGPoint(x: 12.414, y: 12.446)))
+        p.addLine(to: t(CGPoint(x: 7.75, y: 12.446)))
+        p.addLine(to: t(CGPoint(x: 7.75, y: 11.55)))
+        p.addCurve(to: t(CGPoint(x: 6.25, y: 11.55)), control1: t(CGPoint(x: 7.252, y: 11.607)), control2: t(CGPoint(x: 6.748, y: 11.607)))
+        return p
+    }
+
+    // MARK: slUsbDrive — Designbox x:2.50 y:0.00 w:9.00 h:14.00
+    static let slUsbDriveDesign = CGRect(x: 2.500, y: 0.000, width: 9.000, height: 14.000)
+
+    static func slUsbDriveFill(t: (CGPoint) -> CGPoint) -> Path {
+        var p = Path()
+        p.move(to: t(CGPoint(x: 4, y: 0)))
+        p.addCurve(to: t(CGPoint(x: 3.5, y: 0.5)), control1: t(CGPoint(x: 3.724, y: 0)), control2: t(CGPoint(x: 3.5, y: 0.224)))
+        p.addLine(to: t(CGPoint(x: 3.5, y: 3.75)))
+        p.addLine(to: t(CGPoint(x: 10.5, y: 3.75)))
+        p.addLine(to: t(CGPoint(x: 10.5, y: 0.5)))
+        p.addCurve(to: t(CGPoint(x: 10, y: 0)), control1: t(CGPoint(x: 10.5, y: 0.224)), control2: t(CGPoint(x: 10.276, y: 0)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 2.5, y: 6)))
+        p.addLine(to: t(CGPoint(x: 2.5, y: 9.5)))
+        p.addCurve(to: t(CGPoint(x: 7, y: 14)), control1: t(CGPoint(x: 2.5, y: 11.985)), control2: t(CGPoint(x: 4.515, y: 14)))
+        p.addCurve(to: t(CGPoint(x: 11.5, y: 9.5)), control1: t(CGPoint(x: 9.485, y: 14)), control2: t(CGPoint(x: 11.5, y: 11.985)))
+        p.addLine(to: t(CGPoint(x: 11.5, y: 6)))
+        p.addCurve(to: t(CGPoint(x: 10.5, y: 5)), control1: t(CGPoint(x: 11.5, y: 5.448)), control2: t(CGPoint(x: 11.052, y: 5)))
+        p.addLine(to: t(CGPoint(x: 3.5, y: 5)))
+        p.addCurve(to: t(CGPoint(x: 2.5, y: 6)), control1: t(CGPoint(x: 2.948, y: 5)), control2: t(CGPoint(x: 2.5, y: 5.448)))
+        return p
+    }
+
+    // MARK: slWeb — Designbox x:0.03 y:0.00 w:13.94 h:14.00
+    static let slWebDesign = CGRect(x: 0.028, y: 0.000, width: 13.945, height: 14.000)
+
+    static func slWebFill(t: (CGPoint) -> CGPoint) -> Path {
+        var p = Path()
+        p.move(to: t(CGPoint(x: 5.049, y: 0.276)))
+        p.addCurve(to: t(CGPoint(x: 0.028, y: 6.375)), control1: t(CGPoint(x: 2.325, y: 1.065)), control2: t(CGPoint(x: 0.285, y: 3.464)))
+        p.addLine(to: t(CGPoint(x: 3.228, y: 6.375)))
+        p.addCurve(to: t(CGPoint(x: 5.049, y: 0.276)), control1: t(CGPoint(x: 3.416, y: 4.226)), control2: t(CGPoint(x: 4.039, y: 2.149)))
+        p.move(to: t(CGPoint(x: 3.228, y: 7.625)))
+        p.addLine(to: t(CGPoint(x: 0.028, y: 7.625)))
+        p.addCurve(to: t(CGPoint(x: 5.049, y: 13.725)), control1: t(CGPoint(x: 0.285, y: 10.536)), control2: t(CGPoint(x: 2.325, y: 12.935)))
+        p.addCurve(to: t(CGPoint(x: 3.228, y: 7.625)), control1: t(CGPoint(x: 4.039, y: 11.851)), control2: t(CGPoint(x: 3.416, y: 9.774)))
+        p.move(to: t(CGPoint(x: 6.652, y: 13.992)))
+        p.addCurve(to: t(CGPoint(x: 4.483, y: 7.625)), control1: t(CGPoint(x: 5.446, y: 12.085)), control2: t(CGPoint(x: 4.7, y: 9.902)))
+        p.addLine(to: t(CGPoint(x: 9.517, y: 7.625)))
+        p.addCurve(to: t(CGPoint(x: 7.348, y: 13.992)), control1: t(CGPoint(x: 9.3, y: 9.902)), control2: t(CGPoint(x: 8.554, y: 12.085)))
+        p.addCurve(to: t(CGPoint(x: 7, y: 14)), control1: t(CGPoint(x: 7.233, y: 13.997)), control2: t(CGPoint(x: 7.117, y: 14)))
+        p.addCurve(to: t(CGPoint(x: 6.652, y: 13.992)), control1: t(CGPoint(x: 6.883, y: 14)), control2: t(CGPoint(x: 6.767, y: 13.997)))
+        p.move(to: t(CGPoint(x: 8.951, y: 13.725)))
+        p.addCurve(to: t(CGPoint(x: 13.973, y: 7.625)), control1: t(CGPoint(x: 11.675, y: 12.936)), control2: t(CGPoint(x: 13.715, y: 10.536)))
+        p.addLine(to: t(CGPoint(x: 10.772, y: 7.625)))
+        p.addCurve(to: t(CGPoint(x: 8.951, y: 13.725)), control1: t(CGPoint(x: 10.584, y: 9.774)), control2: t(CGPoint(x: 9.961, y: 11.851)))
+        p.move(to: t(CGPoint(x: 10.772, y: 6.375)))
+        p.addLine(to: t(CGPoint(x: 13.973, y: 6.375)))
+        p.addCurve(to: t(CGPoint(x: 8.951, y: 0.276)), control1: t(CGPoint(x: 13.715, y: 3.464)), control2: t(CGPoint(x: 11.675, y: 1.065)))
+        p.addCurve(to: t(CGPoint(x: 10.772, y: 6.375)), control1: t(CGPoint(x: 9.961, y: 2.149)), control2: t(CGPoint(x: 10.584, y: 4.226)))
+        p.move(to: t(CGPoint(x: 6.652, y: 0.008)))
+        p.addCurve(to: t(CGPoint(x: 7, y: 0)), control1: t(CGPoint(x: 6.767, y: 0.003)), control2: t(CGPoint(x: 6.883, y: 0)))
+        p.addCurve(to: t(CGPoint(x: 7.348, y: 0.008)), control1: t(CGPoint(x: 7.117, y: 0)), control2: t(CGPoint(x: 7.233, y: 0.003)))
+        p.addCurve(to: t(CGPoint(x: 9.517, y: 6.375)), control1: t(CGPoint(x: 8.554, y: 1.914)), control2: t(CGPoint(x: 9.3, y: 4.098)))
+        p.addLine(to: t(CGPoint(x: 4.483, y: 6.375)))
+        p.addCurve(to: t(CGPoint(x: 6.652, y: 0.008)), control1: t(CGPoint(x: 4.7, y: 4.098)), control2: t(CGPoint(x: 5.446, y: 1.914)))
+        return p
+    }
+
+    // MARK: slWifiAntenna — Designbox x:0.00 y:0.07 w:13.97 h:13.83
+    static let slWifiAntennaDesign = CGRect(x: 0.000, y: 0.069, width: 13.974, height: 13.830)
+
+    static func slWifiAntennaFill(t: (CGPoint) -> CGPoint) -> Path {
+        var p = Path()
+        p.move(to: t(CGPoint(x: 11.63, y: 0.247)))
+        p.addCurve(to: t(CGPoint(x: 10.889, y: 0.113)), control1: t(CGPoint(x: 11.425, y: 0.073)), control2: t(CGPoint(x: 11.142, y: 0.021)))
+        p.addCurve(to: t(CGPoint(x: 10.405, y: 0.691)), control1: t(CGPoint(x: 10.635, y: 0.205)), control2: t(CGPoint(x: 10.451, y: 0.425)))
+        p.addCurve(to: t(CGPoint(x: 10.667, y: 1.397)), control1: t(CGPoint(x: 10.359, y: 0.956)), control2: t(CGPoint(x: 10.459, y: 1.226)))
+        p.addCurve(to: t(CGPoint(x: 11.961, y: 3.143)), control1: t(CGPoint(x: 11.197, y: 1.84)), control2: t(CGPoint(x: 11.643, y: 2.436)))
+        p.addCurve(to: t(CGPoint(x: 12.474, y: 5.44)), control1: t(CGPoint(x: 12.282, y: 3.867)), control2: t(CGPoint(x: 12.457, y: 4.648)))
+        p.addCurve(to: t(CGPoint(x: 11.959, y: 7.738)), control1: t(CGPoint(x: 12.456, y: 6.233)), control2: t(CGPoint(x: 12.281, y: 7.014)))
+        p.addCurve(to: t(CGPoint(x: 10.661, y: 9.482)), control1: t(CGPoint(x: 11.664, y: 8.41)), control2: t(CGPoint(x: 11.22, y: 9.006)))
+        p.addCurve(to: t(CGPoint(x: 10.565, y: 10.538)), control1: t(CGPoint(x: 10.343, y: 9.747)), control2: t(CGPoint(x: 10.299, y: 10.22)))
+        p.addCurve(to: t(CGPoint(x: 11.621, y: 10.635)), control1: t(CGPoint(x: 10.83, y: 10.857)), control2: t(CGPoint(x: 11.303, y: 10.9)))
+        p.addCurve(to: t(CGPoint(x: 13.326, y: 8.355)), control1: t(CGPoint(x: 12.341, y: 10.035)), control2: t(CGPoint(x: 12.921, y: 9.252)))
+        p.addCurve(to: t(CGPoint(x: 13.974, y: 5.423)), control1: t(CGPoint(x: 13.738, y: 7.432)), control2: t(CGPoint(x: 13.958, y: 6.434)))
+        p.addCurve(to: t(CGPoint(x: 13.329, y: 2.528)), control1: t(CGPoint(x: 13.954, y: 4.425)), control2: t(CGPoint(x: 13.735, y: 3.44)))
+        p.addCurve(to: t(CGPoint(x: 11.63, y: 0.247)), control1: t(CGPoint(x: 12.942, y: 1.649)), control2: t(CGPoint(x: 12.361, y: 0.87)))
+        p.move(to: t(CGPoint(x: 5.35, y: 8.664)))
+        p.addCurve(to: t(CGPoint(x: 4.295, y: 8.765)), control1: t(CGPoint(x: 5.086, y: 8.983)), control2: t(CGPoint(x: 4.614, y: 9.028)))
+        p.addCurve(to: t(CGPoint(x: 3.18, y: 7.3)), control1: t(CGPoint(x: 3.818, y: 8.366)), control2: t(CGPoint(x: 3.437, y: 7.866)))
+        p.addCurve(to: t(CGPoint(x: 2.75, y: 5.408)), control1: t(CGPoint(x: 2.909, y: 6.705)), control2: t(CGPoint(x: 2.762, y: 6.061)))
+        p.addCurve(to: t(CGPoint(x: 3.178, y: 3.557)), control1: t(CGPoint(x: 2.767, y: 4.769)), control2: t(CGPoint(x: 2.913, y: 4.139)))
+        p.addCurve(to: t(CGPoint(x: 4.294, y: 2.087)), control1: t(CGPoint(x: 3.435, y: 2.989)), control2: t(CGPoint(x: 3.816, y: 2.487)))
+        p.addCurve(to: t(CGPoint(x: 5.043, y: 1.947)), control1: t(CGPoint(x: 4.5, y: 1.908)), control2: t(CGPoint(x: 4.786, y: 1.854)))
+        p.addCurve(to: t(CGPoint(x: 5.528, y: 2.534)), control1: t(CGPoint(x: 5.299, y: 2.04)), control2: t(CGPoint(x: 5.485, y: 2.265)))
+        p.addCurve(to: t(CGPoint(x: 5.249, y: 3.243)), control1: t(CGPoint(x: 5.571, y: 2.804)), control2: t(CGPoint(x: 5.464, y: 3.075)))
+        p.addCurve(to: t(CGPoint(x: 4.541, y: 4.183)), control1: t(CGPoint(x: 4.945, y: 3.499)), control2: t(CGPoint(x: 4.703, y: 3.82)))
+        p.addCurve(to: t(CGPoint(x: 4.25, y: 5.429)), control1: t(CGPoint(x: 4.363, y: 4.575)), control2: t(CGPoint(x: 4.264, y: 4.999)))
+        p.addCurve(to: t(CGPoint(x: 4.542, y: 6.672)), control1: t(CGPoint(x: 4.266, y: 5.869)), control2: t(CGPoint(x: 4.368, y: 6.294)))
+        p.addCurve(to: t(CGPoint(x: 5.248, y: 7.609)), control1: t(CGPoint(x: 4.719, y: 7.056)), control2: t(CGPoint(x: 4.964, y: 7.374)))
+        p.addCurve(to: t(CGPoint(x: 5.518, y: 8.116)), control1: t(CGPoint(x: 5.402, y: 7.735)), control2: t(CGPoint(x: 5.499, y: 7.918)))
+        p.addCurve(to: t(CGPoint(x: 5.35, y: 8.665)), control1: t(CGPoint(x: 5.537, y: 8.314)), control2: t(CGPoint(x: 5.477, y: 8.511)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 8.624, y: 2.216)))
+        p.addCurve(to: t(CGPoint(x: 9.679, y: 2.115)), control1: t(CGPoint(x: 8.888, y: 1.897)), control2: t(CGPoint(x: 9.36, y: 1.852)))
+        p.addCurve(to: t(CGPoint(x: 10.793, y: 3.581)), control1: t(CGPoint(x: 10.151, y: 2.504)), control2: t(CGPoint(x: 10.529, y: 3.008)))
+        p.addCurve(to: t(CGPoint(x: 11.223, y: 5.473)), control1: t(CGPoint(x: 11.064, y: 4.176)), control2: t(CGPoint(x: 11.211, y: 4.82)))
+        p.addCurve(to: t(CGPoint(x: 10.795, y: 7.324)), control1: t(CGPoint(x: 11.206, y: 6.112)), control2: t(CGPoint(x: 11.06, y: 6.742)))
+        p.addCurve(to: t(CGPoint(x: 9.68, y: 8.796)), control1: t(CGPoint(x: 10.539, y: 7.892)), control2: t(CGPoint(x: 10.158, y: 8.395)))
+        p.addCurve(to: t(CGPoint(x: 8.932, y: 8.933)), control1: t(CGPoint(x: 9.474, y: 8.974)), control2: t(CGPoint(x: 9.188, y: 9.027)))
+        p.addCurve(to: t(CGPoint(x: 8.449, y: 8.347)), control1: t(CGPoint(x: 8.677, y: 8.84)), control2: t(CGPoint(x: 8.492, y: 8.616)))
+        p.addCurve(to: t(CGPoint(x: 8.726, y: 7.639)), control1: t(CGPoint(x: 8.406, y: 8.078)), control2: t(CGPoint(x: 8.512, y: 7.807)))
+        p.addCurve(to: t(CGPoint(x: 9.434, y: 6.699)), control1: t(CGPoint(x: 9.011, y: 7.404)), control2: t(CGPoint(x: 9.256, y: 7.084)))
+        p.addCurve(to: t(CGPoint(x: 9.724, y: 5.453)), control1: t(CGPoint(x: 9.608, y: 6.32)), control2: t(CGPoint(x: 9.709, y: 5.893)))
+        p.addCurve(to: t(CGPoint(x: 9.432, y: 4.21)), control1: t(CGPoint(x: 9.709, y: 5.024)), control2: t(CGPoint(x: 9.61, y: 4.601)))
+        p.addCurve(to: t(CGPoint(x: 8.726, y: 3.273)), control1: t(CGPoint(x: 9.27, y: 3.849)), control2: t(CGPoint(x: 9.029, y: 3.529)))
+        p.addCurve(to: t(CGPoint(x: 8.457, y: 2.766)), control1: t(CGPoint(x: 8.573, y: 3.146)), control2: t(CGPoint(x: 8.476, y: 2.964)))
+        p.addCurve(to: t(CGPoint(x: 8.625, y: 2.217)), control1: t(CGPoint(x: 8.438, y: 2.568)), control2: t(CGPoint(x: 8.498, y: 2.37)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 3.4, y: 10.54)))
+        p.addCurve(to: t(CGPoint(x: 2.891, y: 10.806)), control1: t(CGPoint(x: 3.272, y: 10.693)), control2: t(CGPoint(x: 3.089, y: 10.788)))
+        p.addCurve(to: t(CGPoint(x: 2.343, y: 10.633)), control1: t(CGPoint(x: 2.693, y: 10.823)), control2: t(CGPoint(x: 2.495, y: 10.761)))
+        p.addCurve(to: t(CGPoint(x: 0.645, y: 8.352)), control1: t(CGPoint(x: 1.612, y: 10.01)), control2: t(CGPoint(x: 1.032, y: 9.231)))
+        p.addCurve(to: t(CGPoint(x: 0, y: 5.423)), control1: t(CGPoint(x: 0.235, y: 7.429)), control2: t(CGPoint(x: 0.015, y: 6.433)))
+        p.addCurve(to: t(CGPoint(x: 0.648, y: 2.525)), control1: t(CGPoint(x: 0.02, y: 4.423)), control2: t(CGPoint(x: 0.24, y: 3.438)))
+        p.addCurve(to: t(CGPoint(x: 2.354, y: 0.245)), control1: t(CGPoint(x: 1.037, y: 1.646)), control2: t(CGPoint(x: 1.62, y: 0.866)))
+        p.addCurve(to: t(CGPoint(x: 3.41, y: 0.342)), control1: t(CGPoint(x: 2.672, y: -0.02)), control2: t(CGPoint(x: 3.145, y: 0.023)))
+        p.addCurve(to: t(CGPoint(x: 3.314, y: 1.398)), control1: t(CGPoint(x: 3.676, y: 0.66)), control2: t(CGPoint(x: 3.632, y: 1.133)))
+        p.addCurve(to: t(CGPoint(x: 2.016, y: 3.142)), control1: t(CGPoint(x: 2.755, y: 1.874)), control2: t(CGPoint(x: 2.311, y: 2.47)))
+        p.addCurve(to: t(CGPoint(x: 1.5, y: 5.44)), control1: t(CGPoint(x: 1.693, y: 3.866)), control2: t(CGPoint(x: 1.518, y: 4.647)))
+        p.addCurve(to: t(CGPoint(x: 2.014, y: 7.737)), control1: t(CGPoint(x: 1.518, y: 6.232)), control2: t(CGPoint(x: 1.692, y: 7.013)))
+        p.addCurve(to: t(CGPoint(x: 3.307, y: 9.483)), control1: t(CGPoint(x: 2.308, y: 8.409)), control2: t(CGPoint(x: 2.75, y: 9.006)))
+        p.addCurve(to: t(CGPoint(x: 3.573, y: 9.992)), control1: t(CGPoint(x: 3.46, y: 9.611)), control2: t(CGPoint(x: 3.555, y: 9.794)))
+        p.addCurve(to: t(CGPoint(x: 3.401, y: 10.54)), control1: t(CGPoint(x: 3.591, y: 10.19)), control2: t(CGPoint(x: 3.529, y: 10.387)))
+        p.closeSubpath()
+        p.move(to: t(CGPoint(x: 7, y: 3.876)))
+        p.addCurve(to: t(CGPoint(x: 5.423, y: 5.115)), control1: t(CGPoint(x: 6.252, y: 3.876)), control2: t(CGPoint(x: 5.601, y: 4.388)))
+        p.addCurve(to: t(CGPoint(x: 6.252, y: 6.941)), control1: t(CGPoint(x: 5.246, y: 5.842)), control2: t(CGPoint(x: 5.588, y: 6.596)))
+        p.addCurve(to: t(CGPoint(x: 6.25, y: 7)), control1: t(CGPoint(x: 6.251, y: 6.961)), control2: t(CGPoint(x: 6.25, y: 6.98)))
+        p.addLine(to: t(CGPoint(x: 6.25, y: 13.149)))
+        p.addCurve(to: t(CGPoint(x: 7, y: 13.899)), control1: t(CGPoint(x: 6.25, y: 13.563)), control2: t(CGPoint(x: 6.586, y: 13.899)))
+        p.addCurve(to: t(CGPoint(x: 7.75, y: 13.149)), control1: t(CGPoint(x: 7.414, y: 13.899)), control2: t(CGPoint(x: 7.75, y: 13.563)))
+        p.addLine(to: t(CGPoint(x: 7.75, y: 7)))
+        p.addCurve(to: t(CGPoint(x: 7.748, y: 6.941)), control1: t(CGPoint(x: 7.75, y: 6.98)), control2: t(CGPoint(x: 7.75, y: 6.96)))
+        p.addCurve(to: t(CGPoint(x: 8.58, y: 5.114)), control1: t(CGPoint(x: 8.414, y: 6.597)), control2: t(CGPoint(x: 8.758, y: 5.842)))
+        p.addCurve(to: t(CGPoint(x: 7, y: 3.876)), control1: t(CGPoint(x: 8.402, y: 4.386)), control2: t(CGPoint(x: 7.749, y: 3.875)))
+        return p
+    }
+
+
+}
+
+/// Ein Streamline-Icon als einfärbbare Form (gerade-ungerade-Füllung wie im SVG).
+struct StreamlineIconShape: Shape {
+    let icon: StreamlineIcon
+
+    func path(in rect: CGRect) -> Path {
+        // Gemeinsames 14×14-Raster statt des engen Umrisses: So sind alle
+        // Icons optisch gleich groß
+        let scale = min(rect.width, rect.height) / 14
+        let dx = rect.midX - 7 * scale
+        let dy = rect.midY - 7 * scale
+        let t: (CGPoint) -> CGPoint = { CGPoint(x: $0.x * scale + dx, y: $0.y * scale + dy) }
+        return switch icon {
+        case .computerChip1: StreamlinePaths.slComputerChip1Fill(t: t)
+        case .computerChip2: StreamlinePaths.slComputerChip2Fill(t: t)
+        case .hardDisk: StreamlinePaths.slHardDiskFill(t: t)
+        case .hardDrive1: StreamlinePaths.slHardDrive1Fill(t: t)
+        case .inboxTray1: StreamlinePaths.slInboxTray1Fill(t: t)
+        case .inboxTray2: StreamlinePaths.slInboxTray2Fill(t: t)
+        case .network: StreamlinePaths.slNetworkFill(t: t)
+        case .usbDrive: StreamlinePaths.slUsbDriveFill(t: t)
+        case .web: StreamlinePaths.slWebFill(t: t)
+        case .wifiAntenna: StreamlinePaths.slWifiAntennaFill(t: t)
+        }
+    }
+}

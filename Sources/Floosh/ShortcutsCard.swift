@@ -5,7 +5,7 @@ struct ShortcutsCard: View {
     let engine: StatsEngine
     @Bindable var shortcuts: ShortcutsService
 
-    static let tint = Color(red: 0.36, green: 0.68, blue: 0.96) // Kurzbefehle-Blau
+    @MainActor static var tint: Color { CardTheme.shared.color(.shortcuts) }
 
     private var size: CardSize { engine.cardSize }
 
@@ -31,7 +31,7 @@ struct ShortcutsCard: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
-            CardIcon(symbol: "square.stack.3d.up", tint: Self.tint, size: size)
+            CardIcon(glyph: CardTheme.shared.glyph(.shortcuts), tint: Self.tint, size: size)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text("Kurzbefehle")

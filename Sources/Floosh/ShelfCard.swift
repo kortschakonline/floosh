@@ -8,7 +8,7 @@ struct ShelfCard: View {
     let engine: StatsEngine
     @Bindable var shelf: FileShelf
 
-    static let tint = Color(red: 0.98, green: 0.45, blue: 0.66) // Rosé
+    @MainActor static var tint: Color { CardTheme.shared.color(.shelf) }
 
     @State private var isTargeted = false
 
@@ -60,8 +60,7 @@ struct ShelfCard: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
-            CardIcon(symbol: shelf.items.isEmpty ? "tray" : "tray.full",
-                     tint: Self.tint, size: size)
+            CardIcon(glyph: CardTheme.shared.glyph(.shelf), tint: Self.tint, size: size)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text("Ablage")
