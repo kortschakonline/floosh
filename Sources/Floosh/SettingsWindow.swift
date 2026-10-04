@@ -578,6 +578,18 @@ private struct OrganizerSettingsTab: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            Section("Diagnose") {
+                Button("Protokoll in die Zwischenablage kopieren") {
+                    let text = (try? String(contentsOf: OrganizerLog.url, encoding: .utf8)) ?? "Kein Protokoll vorhanden."
+                    // Die letzten 80 Zeilen reichen und passen in jede Nachricht
+                    let tail = text.split(separator: "\n", omittingEmptySubsequences: false).suffix(80).joined(separator: "\n")
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(tail, forType: .string)
+                }
+                Text("Hält fest, wie floosh die Trenner berechnet. Hilft bei der Fehlersuche, wenn Symbole nicht verschwinden.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             .disabled(!organizer.enabled)
             Section("Versteckte Symbole als Leiste") {
                 Toggle("Statt Ausklappen eine Leiste unter der Menüleiste zeigen", isOn: $organizer.barMode)
