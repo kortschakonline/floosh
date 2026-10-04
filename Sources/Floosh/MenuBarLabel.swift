@@ -5,6 +5,10 @@ import AppKit
 /// selbst am Engine zu hängen (so kann der Snapshot-Hook Varianten bauen).
 struct MenuLabelSpec {
     var group: SpeedGroup
+    /// Statt einer Gruppe das System: floosh-Logo, CPU/GPU.
+    var showsSystem = false
+    /// Temperatur/Lüfter als Symbol + Farbverlaufsbalken (0…1).
+    var thermalBars: [(symbol: String, fraction: Double?)] = []
     var labelStyle: MenuLabelStyle
     var iconStyle: MenuIconStyle
     /// Zahlen in Gruppenfarbe — nur beim farbigen Symbol möglich (Template-
@@ -44,7 +48,7 @@ extension StatsEngine {
     func menuLabelSpec() -> MenuLabelSpec {
         let group = selectedGroup
         let state = state(for: group)
-        let idle = menuHideIdle && state.read + state.write < Self.idleThreshold
+        let idle = !menuShowsSystem && menuHideIdle && state.read + state.write < Self.idleThreshold
 
         var style = labelStyle
         if idle { style = .symbolOnly }
@@ -69,11 +73,33 @@ extension StatsEngine {
             cpuUsage: system.cpuUsage,
             gpuUsage: system.gpuUsage
         )
-        spec.thermalRows = thermalRows()
-        if menuSparkline, !idle {
+        if menuThermal == .bars {
+            spec.thermalBars = thermalBars()
+        } else {
+            spec.thermalRows = thermalRows()
+        }
+        if menuShowsSystem {
+            // System statt Gruppe: Text = Auslastung, kein CPU/GPU-Block doppelt
+            spec.showsSystem = true
+            spec.singleLine = "CPU \(InfoBlockText.percent(system.cpuUsage))"
+            spec.readLine = "C \(InfoBlockText.percent(system.cpuUsage))"
+            spec.writeLine = "G \(InfoBlockText.percent(system.gpuUsage))"
+            spec.systemStyle = .off
+        } else if menuSparkline, !idle {
             spec.sparkline = sparklineValues(for: group)
         }
         return spec
+    }
+
+    /// Temperatur 30–100 °C und Lüfter relativ zur Höchstdrehzahl als 0…1.
+    private func thermalBars() -> [(symbol: String, fraction: Double?)] {
+        let hottest = [system.cpuTemp, system.gpuTemp].compactMap { $0 }.max()
+        let temp = hottest.map { min(max(($0 - 30) / 70, 0), 1) }
+        var rows: [(symbol: String, fraction: Double?)] = [("thermometer.medium", temp)]
+        if let fan = system.fans.max(by: { $0.rpm < $1.rpm }), fan.maxRPM > 0 {
+            rows.append(("fan", min(max(fan.rpm / fan.maxRPM, 0), 1)))
+        }
+        return rows
     }
 
     private func thermalRows() -> [(letter: String, value: String)] {
@@ -82,7 +108,7 @@ extension StatsEngine {
             system.fans.map(\.rpm).max().map { "\(Int($0.rounded()))" } ?? "–"
         }
         switch menuThermal {
-        case .off:
+        case .off, .bars:
             return []
         case .temp:
             return [("C", temp(system.cpuTemp)), ("G", temp(system.gpuTemp))]
@@ -114,20 +140,31 @@ enum LabelImageRenderer {
     /// färbt hell/dunkel), Farbig als normales Bild mit Gruppenfarbe.
     static func render(_ spec: MenuLabelSpec) -> NSImage {
         let isColor = spec.iconStyle == .color
+        // Farbverlaufsbalken gehen nur in einem farbigen (Nicht-Vorlagen-)Bild —
+        // dann zeichnet floosh Text und Symbol selbst hell bzw. dunkel
+        let drawsColor = isColor || !spec.thermalBars.isEmpty
         let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        let tint = NSColor(spec.group.tint)
-        let textColor: NSColor = isColor ? (spec.tintText ? tint : (isDark ? .white : .black)) : .black
-        let symbolColor: NSColor = isColor ? tint : .black
+        let plain: NSColor = drawsColor ? (isDark ? .white : .black) : .black
+        let tint = spec.showsSystem ? NSColor(SystemCard.tint) : NSColor(spec.group.tint)
+        let textColor: NSColor = isColor ? (spec.tintText ? tint : plain) : plain
+        let symbolColor: NSColor = isColor ? tint : plain
 
-        let symbolName = spec.group.symbol(for: spec.iconStyle)
         let symbolSize: CGFloat = spec.labelStyle == .single ? 13 : 11.5
-        var symbolConfig = NSImage.SymbolConfiguration(pointSize: symbolSize, weight: .medium)
-        if isColor {
-            symbolConfig = symbolConfig.applying(.init(paletteColors: [symbolColor]))
-        }
-        let symbol = (NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)
+        let symbol: NSImage?
+        if spec.showsSystem {
+            symbol = FlooshMenuLogo.image(height: symbolSize + 3,
+                                          frameColor: symbolColor,
+                                          accentColor: drawsColor ? NSColor(Color.flooshOrange) : symbolColor)
+        } else {
+            let symbolName = spec.group.symbol(for: spec.iconStyle)
+            var symbolConfig = NSImage.SymbolConfiguration(pointSize: symbolSize, weight: .medium)
+            if drawsColor {
+                symbolConfig = symbolConfig.applying(.init(paletteColors: [symbolColor]))
+            }
+            symbol = (NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)
                       ?? NSImage(systemSymbolName: spec.group.symbol, accessibilityDescription: nil))?
-            .withSymbolConfiguration(symbolConfig)
+                .withSymbolConfiguration(symbolConfig)
+        }
         let symbolWidth = ceil(symbol?.size.width ?? 0)
 
         let height: CGFloat = 22
@@ -163,11 +200,24 @@ enum LabelImageRenderer {
             bar: spec.systemStyle == .bar,
             textColor: textColor
         )
-        let thermalBlock: InfoBlock? = spec.thermalRows.isEmpty ? nil : InfoBlock(
-            rows: spec.thermalRows.prefix(2).map { .init(letter: $0.letter, text: $0.value, fraction: nil) },
-            bar: false,
-            textColor: textColor
-        )
+        let thermalBlock: InfoBlock?
+        if !spec.thermalBars.isEmpty {
+            thermalBlock = InfoBlock(
+                rows: spec.thermalBars.prefix(2).map {
+                    .init(letter: "", text: "", fraction: $0.fraction, symbol: $0.symbol, gradient: true)
+                },
+                bar: true,
+                textColor: textColor
+            )
+        } else if !spec.thermalRows.isEmpty {
+            thermalBlock = InfoBlock(
+                rows: spec.thermalRows.prefix(2).map { .init(letter: $0.letter, text: $0.value, fraction: nil) },
+                bar: false,
+                textColor: textColor
+            )
+        } else {
+            thermalBlock = nil
+        }
 
         var width = symbolWidth
         if sparkWidth > 0 { width += gap + sparkWidth }
@@ -184,7 +234,7 @@ enum LabelImageRenderer {
             symbol.draw(in: NSRect(x: x, y: (height - symSize.height) / 2,
                                    width: symSize.width, height: symSize.height),
                         from: .zero, operation: .sourceOver,
-                        fraction: isColor ? 1.0 : 0.85)
+                        fraction: drawsColor ? 1.0 : 0.85)
             x += symbolWidth
         }
 
@@ -226,7 +276,7 @@ enum LabelImageRenderer {
         }
 
         image.unlockFocus()
-        image.isTemplate = !isColor
+        image.isTemplate = !drawsColor
         return image
     }
 
@@ -277,6 +327,10 @@ private struct InfoBlock {
         let letter: String
         let text: String
         let fraction: Double?
+        /// SF Symbol statt Buchstabe (Thermometer, Lüfter).
+        var symbol: String? = nil
+        /// Balken mit Farbverlauf blau → grün → orange → rot.
+        var gradient = false
     }
 
     let rows: [Row]
@@ -295,8 +349,16 @@ private struct InfoBlock {
     }
 
     private var letterWidth: CGFloat {
-        ceil(NSAttributedString(string: "G", attributes: [.font: Self.letterFont]).size().width)
+        if rows.contains(where: { $0.symbol != nil }) { return 10 }
+        return ceil(NSAttributedString(string: "G", attributes: [.font: Self.letterFont]).size().width)
     }
+
+    private static let gradientColors: [NSColor] = [
+        NSColor(red: 0.25, green: 0.55, blue: 1.0, alpha: 1),   // blau
+        NSColor(red: 0.20, green: 0.80, blue: 0.40, alpha: 1),  // grün
+        NSColor(red: 1.0, green: 0.62, blue: 0.15, alpha: 1),   // orange
+        NSColor(red: 0.95, green: 0.22, blue: 0.20, alpha: 1),  // rot
+    ]
 
     var width: CGFloat {
         letterWidth + 3 + (bar ? Self.barWidth : Self.valueWidth)
@@ -315,11 +377,22 @@ private struct InfoBlock {
     }
 
     private func drawRow(_ row: Row, x: CGFloat, midY: CGFloat) {
-        let letterAttr = NSAttributedString(string: row.letter,
-                                            attributes: [.font: Self.letterFont,
-                                                         .foregroundColor: textColor])
-        let letterSize = letterAttr.size()
-        letterAttr.draw(at: NSPoint(x: x, y: midY - letterSize.height / 2))
+        if let name = row.symbol {
+            let config = NSImage.SymbolConfiguration(pointSize: 8, weight: .bold)
+                .applying(.init(paletteColors: [textColor]))
+            if let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+                .withSymbolConfiguration(config) {
+                let s = image.size
+                image.draw(in: NSRect(x: x + (letterWidth - s.width) / 2, y: midY - s.height / 2,
+                                      width: s.width, height: s.height))
+            }
+        } else {
+            let letterAttr = NSAttributedString(string: row.letter,
+                                                attributes: [.font: Self.letterFont,
+                                                             .foregroundColor: textColor])
+            let letterSize = letterAttr.size()
+            letterAttr.draw(at: NSPoint(x: x, y: midY - letterSize.height / 2))
+        }
 
         let contentX = x + letterWidth + 3
         if bar {
@@ -335,8 +408,17 @@ private struct InfoBlock {
                 let fillRect = NSRect(x: barRect.minX, y: barRect.minY,
                                       width: fillWidth, height: barRect.height)
                 let fill = NSBezierPath(roundedRect: fillRect, xRadius: radius, yRadius: radius)
-                textColor.setFill()
-                fill.fill()
+                if row.gradient, let gradient = NSGradient(colors: Self.gradientColors) {
+                    // Verlauf über die ganze Balkenbreite — die Farbe am Ende
+                    // des Füllstands zeigt die Stufe
+                    NSGraphicsContext.saveGraphicsState()
+                    fill.addClip()
+                    gradient.draw(in: barRect, angle: 0)
+                    NSGraphicsContext.restoreGraphicsState()
+                } else {
+                    textColor.setFill()
+                    fill.fill()
+                }
             }
         } else {
             let attr = NSAttributedString(string: row.text,
@@ -346,5 +428,31 @@ private struct InfoBlock {
             // rechtsbündig innerhalb der festen Wertspalte
             attr.draw(at: NSPoint(x: contentX + Self.valueWidth - size.width, y: midY - size.height / 2))
         }
+    }
+}
+
+
+/// Prozentangabe für Menüleisten-Texte (außerhalb des privaten InfoBlock nutzbar).
+enum InfoBlockText {
+    static func percent(_ v: Double?) -> String {
+        v.map { "\(Int(($0 * 100).rounded())) %" } ?? "–"
+    }
+}
+
+/// Das floosh-Logo als kleines Menüleisten-Bild (aus den Marken-Pfaden).
+@MainActor
+enum FlooshMenuLogo {
+    static func image(height: CGFloat, frameColor: NSColor, accentColor: NSColor) -> NSImage {
+        let aspect = LogoPaths.boltDesign.width / LogoPaths.boltDesign.height
+        let size = NSSize(width: ceil(height * aspect) + 1, height: height)
+        let image = NSImage(size: size, flipped: true) { rect in
+            let frame = FlooshBoltShape(part: .frame).path(in: rect).cgPath
+            let accent = FlooshBoltShape(part: .accent).path(in: rect).cgPath
+            guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
+            ctx.addPath(frame); ctx.setFillColor(frameColor.cgColor); ctx.fillPath()
+            ctx.addPath(accent); ctx.setFillColor(accentColor.cgColor); ctx.fillPath()
+            return true
+        }
+        return image
     }
 }

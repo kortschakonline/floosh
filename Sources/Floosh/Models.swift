@@ -104,7 +104,7 @@ enum MenuChannel: String, CaseIterable, Identifiable {
 
 /// Temperatur-/Lüfter-Block in der Menüleiste (zweizeilig).
 enum MenuThermalStyle: String, CaseIterable, Identifiable {
-    case off, temp, fan, both
+    case off, temp, fan, both, bars
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -112,6 +112,7 @@ enum MenuThermalStyle: String, CaseIterable, Identifiable {
         case .temp: "Temperatur"
         case .fan: "Lüfter"
         case .both: "Beides"
+        case .bars: "Balken"
         }
     }
 }
@@ -126,6 +127,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
     case shelf
     case shortcuts
     case battery
+    case mac
 
     var id: String { rawValue }
 
@@ -138,6 +140,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
         case .shelf: "Ablage"
         case .shortcuts: "Kurzbefehle"
         case .battery: "Akku"
+        case .mac: "Dieser Mac"
         }
     }
 
@@ -151,6 +154,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
         case .shelf: "tray"
         case .shortcuts: "square.stack.3d.up"
         case .battery: "battery.75percent"
+        case .mac: "laptopcomputer"
         }
     }
 

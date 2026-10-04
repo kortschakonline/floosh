@@ -66,6 +66,7 @@ final class MenuBarOrganizer {
     private var collapseTask: Task<Void, Never>?
     private var hoverTask: Task<Void, Never>?
     private var monitors: [Any] = []
+    private var appSwitchObserver: NSObjectProtocol?
 
     /// Namen der Trenner für die Bedienungshilfen — darüber findet Stufe 2
     /// ihre Lage im selben Koordinatensystem wie alle anderen Symbole.
@@ -121,6 +122,10 @@ final class MenuBarOrganizer {
         self.alwaysDivider = always
 
         startMonitors()
+        appSwitchObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { _ in
+            Task { @MainActor in MenuBarOrganizer.shared.refitAfterAppSwitch() }
+        }
         // Erst ausgeklappt anlegen, damit macOS die Trenner platziert — ihre
         // Lage braucht `fillLength` zum Einklappen
         apply(expanded: true, always: true)
@@ -143,6 +148,8 @@ final class MenuBarOrganizer {
         hoverTask?.cancel()
         monitors.forEach(NSEvent.removeMonitor)
         monitors.removeAll()
+        if let appSwitchObserver { NSWorkspace.shared.notificationCenter.removeObserver(appSwitchObserver) }
+        appSwitchObserver = nil
         for item in [toggle, hiddenDivider, alwaysDivider].compactMap({ $0 }) {
             NSStatusBar.system.removeStatusItem(item)
         }
@@ -347,11 +354,56 @@ final class MenuBarOrganizer {
         guard let button = item?.button, let window = button.window,
               item?.length != Self.hidingLength else { return nil }
         let frame = window.convertToScreen(button.convert(button.bounds, to: nil))
-        guard frame.width > 0, frame.width < 200,
-              let screen = window.screen ?? NSScreen.main else { return nil }
-        let leftLimit = screen.auxiliaryTopRightArea.map { $0.minX } ?? screen.frame.minX
-        let fill = frame.maxX - leftLimit - 2
+        guard frame.width > 0, let screen = window.screen ?? NSScreen.main else { return nil }
+        // Rechte Kante merken, solange der Trenner schmal ist — sie bleibt beim
+        // Einklappen stehen und dient später zum Nachrechnen (App-Wechsel)
+        if frame.width < 200 { rightEdges[ObjectIdentifier(item!)] = frame.maxX }
+        guard let rightEdge = rightEdges[ObjectIdentifier(item!)] else { return nil }
+        let fill = rightEdge - Self.statusAreaLeftLimit(on: screen) - 2
         return fill > 20 ? fill : nil
+    }
+
+    /// Rechte Kante der Trenner im schmalen Zustand (je Status-Item).
+    private var rightEdges: [ObjectIdentifier: CGFloat] = [:]
+
+    /// Wo der Bereich der Menüleisten-Symbole links endet: an der Notch, sonst
+    /// am Ende der Menüs der gerade aktiven App (Bedienungshilfen). Ohne Notch
+    /// bis zum Bildschirmrand zu rechnen wäre zu breit — macOS blendet den
+    /// Trenner dann einfach aus, statt die Symbole wegzuschieben (Mac mini).
+    private static func statusAreaLeftLimit(on screen: NSScreen) -> CGFloat {
+        if let notch = screen.auxiliaryTopRightArea, screen.safeAreaInsets.top > 0 {
+            return notch.minX
+        }
+        if AXIsProcessTrusted(), let app = NSWorkspace.shared.frontmostApplication {
+            let axApp = AXUIElementCreateApplication(app.processIdentifier)
+            var bar: CFTypeRef?
+            if AXUIElementCopyAttributeValue(axApp, kAXMenuBarAttribute as CFString, &bar) == .success, let bar {
+                var children: CFTypeRef?
+                AXUIElementCopyAttributeValue(bar as! AXUIElement, kAXChildrenAttribute as CFString, &children)
+                var maxX = screen.frame.minX
+                for element in (children as? [AXUIElement]) ?? [] {
+                    var pos: CFTypeRef?
+                    var size: CFTypeRef?
+                    AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &pos)
+                    AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size)
+                    var p = CGPoint.zero
+                    var s = CGSize.zero
+                    if let pos { AXValueGetValue(pos as! AXValue, .cgPoint, &p) }
+                    if let size { AXValueGetValue(size as! AXValue, .cgSize, &s) }
+                    maxX = max(maxX, p.x + s.width)
+                }
+                if maxX > screen.frame.minX { return maxX + 12 }
+            }
+        }
+        // Ohne Bedienungshilfen: großzügig schätzen — App-Menüs nehmen selten
+        // mehr als 45 % der Breite ein
+        return screen.frame.minX + screen.frame.width * 0.45
+    }
+
+    /// Beim App-Wechsel ändern sich die Menüs links — Breite neu rechnen.
+    private func refitAfterAppSwitch() {
+        guard !isExpanded, isRunning else { return }
+        apply(expanded: false, always: false, quiet: true)
     }
 
     func toggleFrame() -> NSRect? {

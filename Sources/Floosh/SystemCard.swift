@@ -14,6 +14,24 @@ struct SystemCard: View {
     @MainActor static var secondaryTint: Color { CardTheme.shared.secondary(.system) }
 
     private var size: CardSize { engine.cardSize }
+    private var isSelected: Bool { engine.menuShowsSystem }
+
+    private var selectionTint: Color? {
+        guard isSelected else { return nil }
+        switch engine.selectionStyle {
+        case .border: return nil
+        case .subtle: return Self.tint.opacity(0.10)
+        case .strong: return Self.tint.opacity(0.22)
+        }
+    }
+
+    private var selectionBorder: (color: Color, width: CGFloat)? {
+        switch engine.selectionStyle {
+        case .border: (Self.tint.opacity(0.75), 1)
+        case .subtle: nil
+        case .strong: (Self.tint.opacity(0.55), 1.5)
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: size.spacing) {
@@ -29,7 +47,19 @@ struct SystemCard: View {
         // Im Raster füllt die Karte die Zeilenhöhe (Glas bis zum Rand)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(size.padding)
-        .cardGlass(cornerRadius: size.cornerRadius)
+        // Klick auf die Kachel (nicht auf Regler/Knöpfe): System in der Menüleiste
+        .contentShape(.rect(cornerRadius: size.cornerRadius))
+        .onTapGesture {
+            withAnimation(.snappy(duration: 0.25)) { engine.menuShowsSystem = true }
+        }
+        .overlay {
+            if isSelected, let border = selectionBorder {
+                RoundedRectangle(cornerRadius: size.cornerRadius)
+                    .strokeBorder(border.color, lineWidth: border.width)
+            }
+        }
+        .cardGlass(tint: selectionTint, cornerRadius: size.cornerRadius)
+        .help("In der Menüleiste anzeigen: System (floosh-Logo, CPU/GPU)")
         .onAppear { fans.refreshHelperState() }
     }
 

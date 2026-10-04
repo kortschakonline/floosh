@@ -80,7 +80,7 @@ struct DropdownView: View {
     /// Die vier Mess-Karten und optional die Ablage — in der Reihenfolge,
     /// die unter Einstellungen → Anzeige eingestellt ist.
     private var visibleCards: [DashboardCard] {
-        var cards: Set<DashboardCard> = [.system, .internalDrives, .externalDrives, .network]
+        var cards: Set<DashboardCard> = [.system, .internalDrives, .externalDrives, .network, .mac]
         if shelf.showInDropdown, Entitlements.shared.isUnlocked(.fileShelf) {
             cards.insert(.shelf)
         }
@@ -93,7 +93,7 @@ struct DropdownView: View {
 
     /// Ausgeblendete Kacheln, die man im Anordnen-Modus zurückholen kann.
     private var hiddenAvailableCards: [DashboardCard] {
-        var cards: Set<DashboardCard> = [.system, .internalDrives, .externalDrives, .network]
+        var cards: Set<DashboardCard> = [.system, .internalDrives, .externalDrives, .network, .mac]
         if shelf.showInDropdown { cards.insert(.shelf) }
         if ShortcutsService.shared.showInDropdown { cards.insert(.shortcuts) }
         if engine.battery != nil { cards.insert(.battery) }
@@ -323,6 +323,7 @@ struct DashboardCardView: View {
         case .shelf: ShelfCard(engine: engine, shelf: shelf)
         case .shortcuts: ShortcutsCard(engine: engine, shortcuts: .shared)
         case .battery: BatteryCard(engine: engine)
+        case .mac: MacInfoCard(engine: engine)
         }
     }
 }

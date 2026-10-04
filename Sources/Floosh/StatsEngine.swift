@@ -46,6 +46,10 @@ final class StatsEngine {
 
     // MARK: Einstellungen (persistiert in UserDefaults)
 
+    /// Menüleiste zeigt das System (floosh-Logo, CPU/GPU) statt einer Gruppe.
+    var menuShowsSystem: Bool {
+        didSet { defaults.set(menuShowsSystem, forKey: "ds.menuShowsSystem") }
+    }
     var selectedGroup: SpeedGroup {
         didSet { defaults.set(selectedGroup.rawValue, forKey: "ds.group") }
     }
@@ -237,6 +241,7 @@ final class StatsEngine {
 
     init() {
         selectedGroup = SpeedGroup(rawValue: defaults.string(forKey: "ds.group") ?? "") ?? .internalDrives
+        menuShowsSystem = defaults.object(forKey: "ds.menuShowsSystem") as? Bool ?? false
         labelStyle = MenuLabelStyle(rawValue: defaults.string(forKey: "ds.labelStyle") ?? "") ?? .split
         iconStyle = MenuIconStyle(rawValue: defaults.string(forKey: "ds.iconStyle") ?? "") ?? .outline
         units = SpeedUnits(rawValue: defaults.string(forKey: "ds.units") ?? "") ?? .bytes

@@ -9,14 +9,17 @@ struct GroupCard: View {
     /// Spitzenwerte und Geräteliste.
     var compact = false
 
-    private var isSelected: Bool { engine.selectedGroup == group }
+    private var isSelected: Bool { !engine.menuShowsSystem && engine.selectedGroup == group }
     private var size: CardSize { engine.cardSize }
 
     var body: some View {
         let state = engine.state(for: group)
 
         Button {
-            withAnimation(.snappy(duration: 0.25)) { engine.selectedGroup = group }
+            withAnimation(.snappy(duration: 0.25)) {
+                engine.selectedGroup = group
+                engine.menuShowsSystem = false
+            }
         } label: {
             VStack(alignment: .leading, spacing: compact ? size.spacing * 0.7 : size.spacing) {
                 if compact {
