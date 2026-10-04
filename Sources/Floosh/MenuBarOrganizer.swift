@@ -67,6 +67,7 @@ final class MenuBarOrganizer {
     private var hoverTask: Task<Void, Never>?
     private var monitors: [Any] = []
     private var appSwitchObserver: NSObjectProtocol?
+    private var refitTask: Task<Void, Never>?
 
     /// Namen der Trenner für die Bedienungshilfen — darüber findet Stufe 2
     /// ihre Lage im selben Koordinatensystem wie alle anderen Symbole.
@@ -134,6 +135,7 @@ final class MenuBarOrganizer {
         self.alwaysDivider = always
 
         startMonitors()
+        startRefitLoop()
         appSwitchObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { _ in
             Task { @MainActor in MenuBarOrganizer.shared.refitAfterAppSwitch() }
@@ -160,6 +162,8 @@ final class MenuBarOrganizer {
         hoverTask?.cancel()
         trustTask?.cancel()
         trustTask = nil
+        refitTask?.cancel()
+        refitTask = nil
         monitors.forEach(NSEvent.removeMonitor)
         monitors.removeAll()
         if let appSwitchObserver { NSWorkspace.shared.notificationCenter.removeObserver(appSwitchObserver) }
@@ -402,20 +406,35 @@ final class MenuBarOrganizer {
     /// zu breite Symbole einfach aus, statt die anderen wegzuschieben —
     /// passt der Trenner gerade noch hinein, rutscht alles links davon raus.
     private func fillLength(for item: NSStatusItem?) -> CGFloat? {
-        guard let button = item?.button, let window = button.window,
-              item?.length != Self.hidingLength else { return nil }
-        let frame = window.convertToScreen(button.convert(button.bounds, to: nil))
-        guard frame.width > 0, let screen = window.screen ?? NSScreen.main else { return nil }
+        guard let item, let button = item.button, let window = button.window else { return nil }
+        // Der Pfeil bleibt immer schmal und sichtbar — sein Bildschirm ist
+        // verlässlicher als der eines ausgeblendeten, überbreiten Trenners
+        guard let screen = toggle?.button?.window?.screen ?? window.screen ?? NSScreen.main else { return nil }
         // Rechte Kante merken, solange der Trenner schmal ist — sie bleibt beim
-        // Einklappen stehen und dient später zum Nachrechnen (App-Wechsel)
-        if frame.width < 200 { rightEdges[ObjectIdentifier(item!)] = frame.maxX }
-        guard let rightEdge = rightEdges[ObjectIdentifier(item!)] else { return nil }
+        // Einklappen stehen und dient später zum Nachrechnen (App-Wechsel).
+        // Als Abstand vom rechten Bildschirmrand: Mit mehreren Monitoren
+        // wandert der Trenner auf den Bildschirm mit dem Fokus, der Abstand
+        // bleibt aber gleich.
+        if item.length != Self.hidingLength {
+            let frame = window.convertToScreen(button.convert(button.bounds, to: nil))
+            if frame.width > 0, frame.width < 200 {
+                rightInsets[ObjectIdentifier(item)] = screen.frame.maxX - frame.maxX
+            }
+        }
+        guard let inset = rightInsets[ObjectIdentifier(item)] else { return nil }
+        let rightEdge = screen.frame.maxX - inset
         let fill = rightEdge - Self.statusAreaLeftLimit(on: screen) - 2
         return fill > 20 ? fill : nil
     }
 
-    /// Rechte Kante der Trenner im schmalen Zustand (je Status-Item).
-    private var rightEdges: [ObjectIdentifier: CGFloat] = [:]
+    /// Abstand der rechten Trennerkante vom rechten Bildschirmrand, gemessen
+    /// im schmalen Zustand (je Status-Item).
+    private var rightInsets: [ObjectIdentifier: CGFloat] = [:]
+
+    /// Zuletzt gemessene Breite der App-Menüs (ab linkem Bildschirmrand). Dient
+    /// als Rückfall, wenn die Bedienungshilfen gerade keine Menüs liefern —
+    /// direkt nach einem App-Wechsel oder wenn floosh selbst vorne ist.
+    private static var lastMenuWidth: CGFloat?
 
     /// Wo der Bereich der Menüleisten-Symbole links endet: an der Notch, sonst
     /// am Ende der Menüs der gerade aktiven App (Bedienungshilfen). Ohne Notch
@@ -425,7 +444,8 @@ final class MenuBarOrganizer {
         if hasNotch(screen), let notch = screen.auxiliaryTopRightArea {
             return notch.minX
         }
-        if AXIsProcessTrusted(), let app = NSWorkspace.shared.frontmostApplication {
+        if AXIsProcessTrusted(), let app = NSWorkspace.shared.frontmostApplication,
+           app.processIdentifier != ProcessInfo.processInfo.processIdentifier {
             let axApp = AXUIElementCreateApplication(app.processIdentifier)
             var bar: CFTypeRef?
             if AXUIElementCopyAttributeValue(axApp, kAXMenuBarAttribute as CFString, &bar) == .success, let bar {
@@ -452,9 +472,12 @@ final class MenuBarOrganizer {
                 if maxX > minX {
                     let menuScreenMinX = NSScreen.screens
                         .first { $0.frame.minX <= minX && minX < $0.frame.maxX }?.frame.minX ?? screen.frame.minX
-                    return screen.frame.minX + (maxX - menuScreenMinX) + 12
+                    lastMenuWidth = maxX - menuScreenMinX
                 }
             }
+        }
+        if AXIsProcessTrusted(), let lastMenuWidth {
+            return screen.frame.minX + lastMenuWidth + 12
         }
         // Ohne Bedienungshilfen: großzügig schätzen — App-Menüs nehmen selten
         // mehr als 45 % der Breite ein
@@ -462,9 +485,38 @@ final class MenuBarOrganizer {
     }
 
     /// Beim App-Wechsel ändern sich die Menüs links — Breite neu rechnen.
+    /// Gleich und noch einmal kurz danach: Direkt nach dem Wechsel hat macOS
+    /// die Menüs der neuen App oft noch nicht ausgelegt.
     private func refitAfterAppSwitch() {
-        guard !isExpanded, isRunning else { return }
+        refit()
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            self?.refit()
+        }
+    }
+
+    /// Eingeklappt die Trennerbreite an Menüs und Bildschirm anpassen — nur
+    /// wenn sie sich spürbar geändert hat, damit nichts flackert.
+    private func refit() {
+        guard !isExpanded, isRunning, let hiddenDivider else { return }
+        let target = fillLength(for: hiddenDivider) ?? Self.hidingLength
+        guard abs(target - hiddenDivider.length) > 3 else { return }
         apply(expanded: false, always: false, quiet: true)
+    }
+
+    /// Ohne Notch regelmäßig nachrechnen: Fokuswechsel auf einen anderen
+    /// Monitor, Menüs, die sich innerhalb einer App ändern, oder ein App-Wechsel,
+    /// den macOS ohne Benachrichtigung abschließt.
+    private func startRefitLoop() {
+        refitTask?.cancel()
+        refitTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1.5))
+                guard let self, self.isRunning else { return }
+                let screen = self.hiddenDivider?.button?.window?.screen ?? NSScreen.main
+                if let screen, !Self.hasNotch(screen) { self.refit() }
+            }
+        }
     }
 
     func toggleFrame() -> NSRect? {
