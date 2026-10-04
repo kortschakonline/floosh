@@ -12,7 +12,7 @@ enum Feature: String, CaseIterable, Identifiable {
     // Menüleiste
     case menuChannel, menuThermal, menuSparkline, menuHideIdle, menuTintText
     // Desktop-Panel und Island
-    case desktopPanel, island
+    case desktopPanel, island, menuBarOrganizer
     // Ablage
     case fileShelf, dragCatcher
     // Werkzeuge

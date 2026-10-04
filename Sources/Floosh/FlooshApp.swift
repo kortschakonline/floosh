@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Fangstreifen oder die Island Datei-Drags sehen wollen.
             _ = DragCatcher.shared
             IslandController.shared.attach(engine: .shared)
+            MenuBarOrganizer.shared.start()
         }
     }
 

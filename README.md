@@ -99,6 +99,17 @@ zusammen mit der JRN.digital-Wortmarke aus `jrn Logo Source/`).
   daneben, Escape oder erneutem Klick schließt. Auch das Einstellungsfenster
   gehört jetzt der App (`SettingsWindowController`) — `showSettingsWindow:`
   meldet in dieser Konstellation Erfolg, öffnet aber nichts.
+- Menüleisten-Organizer (`MenuBarOrganizer.swift`, 1.12): drei eigene
+  `NSStatusItem`s (Pfeil, Trenner „versteckt", Trenner „immer versteckt"),
+  angeordnet per ⌘-Ziehen, Positionen via `autosaveName`. Eingeklappt wird ein
+  Trenner **genau** so breit wie der Platz bis zum linken Rand des
+  Symbolbereichs (`auxiliaryTopRightArea` bzw. Bildschirmrand) — macOS 27
+  blendet zu breite Symbole (die übliche Länge 10 000) einfach aus, statt die
+  anderen wegzuschieben. Startpositionen beim ersten Einschalten über
+  „NSStatusItem Preferred Position <Name>" (Abstand vom rechten Rand); macOS
+  löscht den Wert beim `removeStatusItem`, `recreateStatusItem` stellt ihn wieder
+  her. Offene Menüs erkennt die Fensterliste (Ebene `popUpMenuWindow`) ohne
+  Bildschirmaufnahme-Recht. Dev-Hook `--organizer-demo`.
 - Farben & Icons (`CardTheme.swift`, 1.11): `ThemeSlot` je Kachel-Familie mit
   Grundfarbe (Hex in `theme.color.*`) und Icon (`theme.icon.*`, `CardGlyph`:
   floosh-Logo, SF Symbol oder Streamline-Icon). Die Zweitfarbe (Schreiben, GPU,

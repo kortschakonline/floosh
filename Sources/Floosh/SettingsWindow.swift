@@ -2,7 +2,7 @@ import SwiftUI
 import ServiceManagement
 
 enum SettingsTab: String, CaseIterable {
-    case display, measurement, fans, panel, island, tools, general
+    case display, measurement, fans, panel, island, organizer, tools, general
 }
 
 /// Eigenständiges Einstellungs-Fenster (⌘,) mit Tabs — hier ist Platz für mehr.
@@ -53,6 +53,9 @@ struct SettingsWindow: View {
                 Tab("Island", systemImage: "capsule.tophalf.filled", value: .island) {
                     IslandSettingsTab(settings: IslandSettings.shared)
                 }
+                Tab("Menüleiste", systemImage: "menubar.rectangle", value: .organizer) {
+                    OrganizerSettingsTab(organizer: MenuBarOrganizer.shared)
+                }
                 Tab("Werkzeuge", systemImage: "wrench.and.screwdriver", value: .tools) {
                     ToolsSettingsTab()
                 }
@@ -77,6 +80,9 @@ struct SettingsWindow: View {
                 IslandSettingsTab(settings: IslandSettings.shared)
                     .tabItem { Label("Island", systemImage: "capsule.tophalf.filled") }
                     .tag(SettingsTab.island)
+                OrganizerSettingsTab(organizer: MenuBarOrganizer.shared)
+                    .tabItem { Label("Menüleiste", systemImage: "menubar.rectangle") }
+                    .tag(SettingsTab.organizer)
                 ToolsSettingsTab()
                     .tabItem { Label("Werkzeuge", systemImage: "wrench.and.screwdriver") }
                     .tag(SettingsTab.tools)
@@ -529,6 +535,53 @@ private struct ThemeEditor: View {
             Spacer()
             Button("Alle zurücksetzen") { theme.resetAll() }
         }
+    }
+}
+
+/// Menüleisten-Tab: Organizer an/aus, Automatik, Anleitung.
+private struct OrganizerSettingsTab: View {
+    @Bindable var organizer: MenuBarOrganizer
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Symbole in der Menüleiste verstecken", isOn: $organizer.enabled)
+                    .featureGated(.menuBarOrganizer)
+                Text("floosh setzt einen Pfeil ‹ und zwei Trenner in die Menüleiste. Was links davon liegt, wird versteckt und kommt per Klick auf den Pfeil wieder.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("So ordnest du an") {
+                Label("⌘ gedrückt halten und Symbole in der Menüleiste ziehen", systemImage: "command")
+                Label("rechts vom Pfeil ‹ — immer sichtbar", systemImage: "eye")
+                Label("zwischen │ und ‹ — versteckt, Klick auf den Pfeil zeigt sie", systemImage: "eye.slash")
+                Label("links von ┆ — immer versteckt, nur per ⌥-Klick auf den Pfeil", systemImage: "lock")
+                Button("Jetzt alle Bereiche zum Anordnen zeigen") {
+                    organizer.expand(includingAlwaysHidden: true)
+                }
+                .disabled(!organizer.enabled)
+            }
+            Section("Automatik") {
+                Picker("Wieder verstecken nach", selection: $organizer.autoHideDelay) {
+                    Text("5 s").tag(5.0)
+                    Text("10 s").tag(10.0)
+                    Text("30 s").tag(30.0)
+                    Text("1 min").tag(60.0)
+                    Text("Nie").tag(0.0)
+                }
+                Toggle("Beim Darüberfahren über den Pfeil ausklappen", isOn: $organizer.hoverReveal)
+                Text("Solange ein Menü offen ist oder der Zeiger in der Menüleiste steht, bleibt alles ausgeklappt.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .disabled(!organizer.enabled)
+            Section("Bald") {
+                Text("Stufe 2: versteckte Symbole in einer eigenen Leiste unter der Menüleiste bzw. in der Island — wichtig auf MacBooks mit Notch, wo Symbole sonst hinter der Notch verschwinden. Dafür braucht floosh die Rechte „Bildschirmaufnahme\u{201C} und „Bedienungshilfen\u{201C}.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
     }
 }
 
