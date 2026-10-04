@@ -129,8 +129,22 @@ cat > "$APP/Contents/Library/LaunchDaemons/digital.jrn.floosh.fanhelper.plist" <
 </plist>
 PLIST
 
-codesign --force --sign - "$APP/Contents/MacOS/FlooshFanHelper"
-codesign --force --sign - "$APP"
+# Mit Developer ID (SIGN_IDENTITY gesetzt, z. B. im Release-Workflow):
+# Hardened Runtime + Zeitstempel, Voraussetzung für die Beglaubigung durch
+# Apple. Die Signatur hängt dann an der Team-ID statt am einzelnen Build —
+# Freigaben wie die Bedienungshilfen bleiben bei Updates erhalten.
+# Ohne: ad hoc wie bisher.
+if [[ -n "$SIGN_IDENTITY" ]]; then
+  echo "→ Signieren mit $SIGN_IDENTITY …"
+  codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" \
+    "$APP/Contents/MacOS/FlooshFanHelper"
+  codesign --force --options runtime --timestamp \
+    --entitlements Tools/floosh.entitlements --sign "$SIGN_IDENTITY" "$APP"
+  codesign --verify --strict --deep "$APP"
+else
+  codesign --force --sign - "$APP/Contents/MacOS/FlooshFanHelper"
+  codesign --force --sign - "$APP"
+fi
 echo "✓ Fertig: $APP"
 echo "  Installieren:  cp -R $APP /Applications/"
 echo "  Hinweis: Manuelle Lüftersteuerung setzt voraus, dass die App aus"
