@@ -89,6 +89,9 @@ struct DesktopPanelView: View {
     let engine: StatsEngine
     var fans: FanService = .shared
     var settings: PanelSettings = .shared
+    /// Meldet die Idealgröße des Inhalts — der Controller setzt danach die
+    /// Fenstergröße selbst (keine Rückkopplung Fenster ↔ SwiftUI).
+    var onContentSize: ((CGSize) -> Void)? = nil
 
     var body: some View {
         let size = engine.cardSize
@@ -126,6 +129,12 @@ struct DesktopPanelView: View {
         .dashboardBackdrop(opacity: engine.backdropOpacity,
                            cornerRadius: size.cornerRadius + 6)
         .environment(\.cardInkOpacity, engine.cardOpacity)
+        // Immer in Idealhöhe auslegen, unabhängig von der Fenstergröße —
+        // sonst könnte sich die Höhe über das Fenster aufschaukeln
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+            onContentSize?(size)
+        }
     }
 
     private func card(_ card: DashboardCard, compact: Bool = false) -> some View {
@@ -165,6 +174,10 @@ final class DesktopPanelController {
 
     // MARK: Beobachtung
 
+    /// Nur die Einstellungen werden beobachtet. `apply()` läuft bewusst
+    /// außerhalb der Beobachtung: Sonst würde jeder Zugriff beim Aufbau des
+    /// Fensters (Messwerte, Kachelgröße …) mitbeobachtet, und das Fenster
+    /// würde bei jedem Messtakt neu eingerichtet.
     private func observeSettings() {
         withObservationTracking { [self] in
             _ = settings.enabled
@@ -174,10 +187,10 @@ final class DesktopPanelController {
             _ = settings.opacity
             _ = settings.allSpaces
             _ = settings.screenName
-            apply()
         } onChange: { [weak self] in
             Task { @MainActor in self?.observeSettings() }
         }
+        apply()
     }
 
     private func apply() {
@@ -211,20 +224,38 @@ final class DesktopPanelController {
         panel.animationBehavior = .none
         panel.titleVisibility = .hidden
 
-        let host = NSHostingController(rootView: DesktopPanelView(engine: engine))
-        // Fenstergröße folgt der Idealgröße des SwiftUI-Inhalts (Geräteliste
-        // wächst/schrumpft) — danach wieder an der gewählten Ecke ausrichten
-        host.sizingOptions = [.preferredContentSize]
-        panel.contentViewController = host
-        panel.setContentSize(host.view.fittingSize)
-
-        observers.append(NotificationCenter.default.addObserver(
-            forName: NSWindow.didResizeNotification, object: panel, queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.reposition() }
+        // Die Fenstergröße setzt der Controller selbst, nicht SwiftUI über
+        // `.preferredContentSize`: Diese Rückkopplung (Fenstergröße → Layout →
+        // Fenstergröße) lief unter macOS 27.2 beim Anmelden in eine endlose
+        // Rekursion und brachte floosh zum Absturz (Mac mini, 1.14.5). Gleiches
+        // Prinzip wie im Menüleisten-Fenster (`applyContentSize`).
+        let host = NSHostingController(rootView: DesktopPanelView(engine: engine) { [weak self] size in
+            // Nie mitten im Layout die Fenstergröße ändern
+            DispatchQueue.main.async { self?.applyContentSize(size) }
         })
+        host.sizingOptions = []
+        panel.contentViewController = host
         window = panel
+        applyContentSize(measureContent(engine: engine))
         return panel
+    }
+
+    /// Idealgröße des Inhalts, gemessen ohne Fenster.
+    private func measureContent(engine: StatsEngine) -> CGSize {
+        NSHostingView(rootView: DesktopPanelView(engine: engine)).fittingSize
+    }
+
+    /// Fenster auf die Inhaltsgröße bringen und an der gewählten Ecke
+    /// ausrichten — nur bei spürbarer Änderung, damit nichts flackert.
+    private func applyContentSize(_ size: CGSize) {
+        guard let window, size.width.isFinite, size.height.isFinite,
+              size.width > 0, size.height > 0 else { return }
+        let target = CGSize(width: size.width.rounded(.up), height: size.height.rounded(.up))
+        let current = window.contentRect(forFrameRect: window.frame).size
+        if abs(current.width - target.width) > 0.5 || abs(current.height - target.height) > 0.5 {
+            window.setContentSize(target)
+        }
+        reposition()
     }
 
     private func targetScreen() -> NSScreen? {

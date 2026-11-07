@@ -9,8 +9,10 @@ import Observation
 ///     [immer versteckt …] ┆ [versteckt …] │ ‹ [sichtbar …]
 ///
 /// - `toggle` (‹ / ›) bleibt immer sichtbar und klappt aus/ein.
-/// - `hiddenDivider` (│): Im eingeklappten Zustand wird er „unendlich" breit
-///   (Länge 10 000) und schiebt alles links von sich aus dem Bild.
+/// - `hiddenDivider` (│): Im eingeklappten Zustand wird er genau so breit, dass
+///   er bis an die Notch bzw. die App-Menüs reicht, und schiebt alles links von
+///   sich aus dem Bild (`fillLength`). Breiter geht unter macOS 27 nicht — zu
+///   breite Symbole blendet macOS einfach aus.
 /// - `alwaysDivider` (┆): dasselbe für den Bereich „immer versteckt", der nur
 ///   per ⌥-Klick aufgeht.
 ///
@@ -74,9 +76,6 @@ final class MenuBarOrganizer {
     static let hiddenDividerLabel = "floosh-Trenner versteckt"
     static let alwaysDividerLabel = "floosh-Trenner immer versteckt"
 
-    /// So breit wird ein Trenner, um alles links von ihm hinauszuschieben.
-    private static let hidingLength: CGFloat = 10_000
-
     private init() {
         enabled = defaults.object(forKey: "organizer.enabled") as? Bool ?? false
         autoHideDelay = defaults.object(forKey: "organizer.autoHide") as? Double ?? 10
@@ -106,7 +105,8 @@ final class MenuBarOrganizer {
     func start() {
         guard enabled, toggle == nil else { return }
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
-        OrganizerLog.write("Start floosh \(version), Bedienungshilfen \(AXIsProcessTrusted() ? "ja" : "nein"), Leiste \(barMode ? "ja" : "nein")")
+        // Gespeicherten Abstand gleich laden (und einen ausgeuferten verwerfen)
+        OrganizerLog.write("Start floosh \(version), Bedienungshilfen \(AXIsProcessTrusted() ? "ja" : "nein"), Leiste \(barMode ? "ja" : "nein"), Luft \(Int(Self.menuGap))")
         if Self.seedPositionsIfNeeded() {
             // floosh selbst soll rechts vom Pfeil sichtbar bleiben
             MenuBarController.shared?.recreateStatusItem()
@@ -241,6 +241,7 @@ final class MenuBarOrganizer {
             warnToggleMisplaced()
             return
         }
+        gapRetries = 0
         apply(expanded: false, always: false)
         if needsAccessibility { warnMissingAccessibility() }
     }
@@ -332,8 +333,17 @@ final class MenuBarOrganizer {
         }
         isExpanded = expanded
         showsAlwaysHidden = expanded && always
-        hiddenDivider?.length = expanded ? NSStatusItem.variableLength : (hiddenFill ?? Self.hidingLength)
-        alwaysDivider?.length = showsAlwaysHidden ? NSStatusItem.variableLength : (alwaysFill ?? Self.hidingLength)
+        // Ohne Messung nicht auf „unendlich" ausweichen: Diese Länge blendet
+        // macOS 27 einfach aus, und aus dem Zustand fände floosh nicht mehr
+        // heraus (der überbreite Trenner lässt sich nicht nachmessen).
+        // Stattdessen schmal lassen und gleich noch einmal versuchen.
+        hiddenDivider?.length = expanded ? NSStatusItem.variableLength : (hiddenFill ?? NSStatusItem.variableLength)
+        alwaysDivider?.length = showsAlwaysHidden ? NSStatusItem.variableLength : (alwaysFill ?? NSStatusItem.variableLength)
+        if !expanded, hiddenFill == nil {
+            retryCollapseSoon()
+        } else {
+            measureRetries = 0
+        }
         // Eingeklappt ist der Trenner eine leere Fläche — ohne Strich darin
         hiddenDivider?.button?.image = expanded ? Self.dividerImage(dashed: false) : nil
         alwaysDivider?.button?.image = showsAlwaysHidden ? Self.dividerImage(dashed: true) : nil
@@ -431,16 +441,26 @@ final class MenuBarOrganizer {
                 let axScreen = NSScreen.screens.first { $0.frame.minX <= ax.midX && ax.midX < $0.frame.maxX } ?? screen
                 rightInsets[ObjectIdentifier(item)] = axScreen.frame.maxX - ax.maxX
             }
-        } else if item.length != Self.hidingLength {
+        } else if item.length == NSStatusItem.variableLength {
             let frame = window.convertToScreen(button.convert(button.bounds, to: nil))
             if frame.width > 0, frame.width < 200 {
                 rightInsets[ObjectIdentifier(item)] = screen.frame.maxX - frame.maxX
             }
         }
         guard let inset = rightInsets[ObjectIdentifier(item)] else { return nil }
-        let rightEdge = screen.frame.maxX - inset
-        let fill = rightEdge - Self.statusAreaLeftLimit(on: screen) - 2
-        return fill > 20 ? fill : nil
+        // Mit „Bildschirme verwenden verschiedene Spaces" hat jeder Bildschirm
+        // eine eigene Menüleiste, der Trenner aber nur eine Länge. Er muss
+        // auf die engste passen — sonst blendet macOS ihn dort ganz aus und
+        // nichts bleibt versteckt (Mac mini: 3008 und 2 × 2560 pt). Auf
+        // breiteren Bildschirmen bleiben dann evtl. einzelne Symbole sichtbar.
+        let screens = NSScreen.screensHaveSeparateSpaces ? NSScreen.screens : [screen]
+        let fill = screens.map { s in
+            s.frame.maxX - inset - Self.statusAreaLeftLimit(on: s) - 2
+        }.min() ?? 0
+        if screens.count > 1 {
+            Self.lastLimitInfo += ", engste von \(screens.count) Menüleisten"
+        }
+        return fill.isFinite && fill > 20 ? fill : nil
     }
 
     /// Abstand der rechten Trennerkante vom rechten Bildschirmrand, gemessen
@@ -457,8 +477,23 @@ final class MenuBarOrganizer {
     /// Trenner aus, wächst der Abstand (siehe `checkLayoutSoon`).
     private static var menuGap: CGFloat = {
         let stored = UserDefaults.standard.double(forKey: "organizer.menuGap")
-        return stored > 0 ? stored : 12
+        // Bis 1.14.5 konnte der Wert endlos wachsen (Mac mini: 604) — solche
+        // Werte verwerfen, sie verhindern jedes Verstecken
+        guard stored > 0, stored <= maxMenuGap else {
+            UserDefaults.standard.removeObject(forKey: "organizer.menuGap")
+            return defaultMenuGap
+        }
+        return stored
     }()
+    private static let defaultMenuGap: CGFloat = 12
+    /// Mehr Luft verlangt macOS nie — reicht das nicht, stimmt die Messung
+    /// nicht, und mehr Abstand würde nur Symbole sichtbar lassen.
+    private static let maxMenuGap: CGFloat = 76
+
+    /// Nachbesserungen nach dem letzten Einklappen durch den Nutzer bzw. die
+    /// Automatik — begrenzt, damit sich nichts aufschaukelt.
+    private var gapRetries = 0
+    private static let maxGapRetries = 3
 
     /// Wie die letzte Grenze zustande kam — fürs Diagnose-Protokoll.
     private static var lastLimitInfo = ""
@@ -492,6 +527,23 @@ final class MenuBarOrganizer {
     /// Zählt Einklapp-Vorgänge — nur der jüngste wird geprüft.
     private var layoutCheckID = 0
 
+    private var measureRetries = 0
+
+    /// Einklappen ohne Messung (gleich nach dem Start, vor der Freigabe der
+    /// Bedienungshilfen …): ein paar Mal kurz danach erneut versuchen.
+    private func retryCollapseSoon() {
+        guard measureRetries < 5 else {
+            OrganizerLog.write("  keine Trennerbreite messbar, Symbole bleiben sichtbar")
+            return
+        }
+        measureRetries += 1
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            guard let self, self.isRunning, !self.isExpanded else { return }
+            self.apply(expanded: false, always: false, quiet: true, caller: "retryCollapseSoon")
+        }
+    }
+
     /// Kurz nach dem Einklappen prüfen, wie macOS die Trenner tatsächlich
     /// ausgelegt hat. Ein zu breiter Trenner wird unter macOS 27 still
     /// ausgeblendet: Er wächst dann nach rechts über den Bildschirmrand,
@@ -515,15 +567,24 @@ final class MenuBarOrganizer {
                   let screen = NSScreen.screens.first(where: { $0.frame.minX <= axToggle.midX && axToggle.midX < $0.frame.maxX }),
                   !Self.hasNotch(screen) else { return }
             let expectedRight = screen.frame.maxX - inset
-            guard abs(ax.maxX - expectedRight) > 12 else { return }
-            guard Self.menuGap < 600 else {
+            // Ausgeblendet heißt: Der Trenner ist nach rechts über seine Kante
+            // hinausgewachsen. Liegt er weiter links, sind nur rechts davon
+            // Symbole dazugekommen oder breiter geworden (z. B. floosh-Werte)
+            // — das löst mehr Abstand nicht, nur eine neue Messung.
+            guard ax.maxX - expectedRight > 12 else { return }
+            guard self.gapRetries < Self.maxGapRetries else {
+                OrganizerLog.write("  Trenner ausgeblendet, keine weiteren Versuche (Luft \(Int(Self.menuGap)))")
+                return
+            }
+            guard Self.menuGap < Self.maxMenuGap else {
                 OrganizerLog.write("  Trenner ausgeblendet, Luft schon maximal (\(Int(Self.menuGap)))")
                 return
             }
-            Self.menuGap += 16
+            self.gapRetries += 1
+            Self.menuGap = min(Self.menuGap + 16, Self.maxMenuGap)
             UserDefaults.standard.set(Double(Self.menuGap), forKey: "organizer.menuGap")
-            OrganizerLog.write("  Trenner ausgeblendet (rechte Kante \(Int(ax.maxX)) statt \(Int(expectedRight))) → Luft \(Int(Self.menuGap))")
-            self.apply(expanded: false, always: false, quiet: true)
+            OrganizerLog.write("  Trenner ausgeblendet (rechte Kante \(Int(ax.maxX)) statt \(Int(expectedRight))) → Luft \(Int(Self.menuGap)), Versuch \(self.gapRetries)")
+            self.apply(expanded: false, always: false, quiet: true, caller: "checkLayoutSoon")
         }
     }
 
@@ -546,6 +607,9 @@ final class MenuBarOrganizer {
         if AXIsProcessTrusted(), let app = NSWorkspace.shared.frontmostApplication,
            app.processIdentifier != ProcessInfo.processInfo.processIdentifier {
             let axApp = AXUIElementCreateApplication(app.processIdentifier)
+            // Hängt die App gerade (z. B. Blender beim Rendern), nicht bis zu
+            // 6 s auf sie warten — dann gilt die zuletzt gemessene Breite
+            AXUIElementSetMessagingTimeout(axApp, 0.25)
             var bar: CFTypeRef?
             if AXUIElementCopyAttributeValue(axApp, kAXMenuBarAttribute as CFString, &bar) == .success, let bar {
                 var children: CFTypeRef?
@@ -603,7 +667,7 @@ final class MenuBarOrganizer {
     /// wenn sie sich spürbar geändert hat, damit nichts flackert.
     private func refit() {
         guard !isExpanded, isRunning, let hiddenDivider else { return }
-        let target = fillLength(for: hiddenDivider) ?? Self.hidingLength
+        let target = fillLength(for: hiddenDivider) ?? NSStatusItem.variableLength
         guard abs(target - hiddenDivider.length) > 3 else { return }
         apply(expanded: false, always: false, quiet: true)
     }
@@ -671,8 +735,8 @@ final class MenuBarOrganizer {
         alert.informativeText = """
         Halte ⌘ gedrückt und ziehe Symbole in der Menüleiste:
 
-        • rechts vom Pfeil ‹ – immer sichtbar
-        • zwischen │ und ‹ – versteckt, kommen per Klick auf den Pfeil
+        • rechts vom Trenner │ – immer sichtbar (│ am besten direkt links neben dem Pfeil ‹ lassen)
+        • zwischen ┆ und │ – versteckt, kommen per Klick auf den Pfeil
         • links von ┆ – immer versteckt, nur per ⌥-Klick auf den Pfeil
 
         Zum Anordnen sind gerade alle Bereiche ausgeklappt.

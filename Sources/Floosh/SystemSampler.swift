@@ -117,12 +117,18 @@ final class SystemSampler {
 
     private func fanReadings() -> [FanReading] {
         guard let smc, fanCount > 0 else { return [] }
+        // Rohwerte prüfen: Ein ungültiger SMC-Wert (NaN/∞) würde beim
+        // Anzeigen über `Int(…)` floosh abstürzen lassen
+        func rpm(_ key: String) -> Double {
+            let value = Double(smc.readFloat(key) ?? 0)
+            return value.isFinite && value >= 0 && value < 20_000 ? value : 0
+        }
         return (0..<fanCount).map { i in
             FanReading(id: i,
-                       rpm: Double(smc.readFloat("F\(i)Ac") ?? 0),
-                       minRPM: Double(smc.readFloat("F\(i)Mn") ?? 0),
-                       maxRPM: Double(smc.readFloat("F\(i)Mx") ?? 0),
-                       targetRPM: Double(smc.readFloat("F\(i)Tg") ?? 0),
+                       rpm: rpm("F\(i)Ac"),
+                       minRPM: rpm("F\(i)Mn"),
+                       maxRPM: rpm("F\(i)Mx"),
+                       targetRPM: rpm("F\(i)Tg"),
                        isManual: (smc.readUInt8("F\(i)Md") ?? 0) != 0)
         }
     }

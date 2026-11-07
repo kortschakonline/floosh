@@ -127,6 +127,9 @@ final class MenuBarItems {
 
         for app in NSWorkspace.shared.runningApplications where app.processIdentifier != ownPID {
             let axApp = AXUIElementCreateApplication(app.processIdentifier)
+            // Eine hängende App (z. B. Blender beim Rendern) darf den Scan
+            // nicht für Sekunden blockieren
+            AXUIElementSetMessagingTimeout(axApp, 0.25)
             guard let bar: AXUIElement = Self.attribute(axApp, "AXExtrasMenuBar") else { continue }
             let children: [AXUIElement] = Self.attribute(bar, kAXChildrenAttribute) ?? []
             for element in children {
