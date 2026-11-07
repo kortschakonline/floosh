@@ -77,6 +77,8 @@ final class MenuBarController: NSObject {
     }
 
     var isOpen: Bool { panel?.isVisible == true }
+    /// Für die Diagnose und die Überlauf-Erkennung (`StatusItemWatch`).
+    var statusItemForDiagnostics: NSStatusItem { statusItem }
     var panelFrame: NSRect? { panel?.frame }
 
     // MARK: Menüleisten-Eintrag

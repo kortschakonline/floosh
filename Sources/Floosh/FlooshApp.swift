@@ -7,7 +7,19 @@ struct FlooshApp: App {
     private let engine = StatsEngine.shared
 
     init() {
+        // `floosh --diagnostics`: Diagnose-Bericht ausgeben und beenden
+        // (auch per ssh abrufbar, ohne die laufende App zu stören)
+        if CommandLine.arguments.contains("--diagnostics") {
+            _ = NSApplication.shared
+            print(Diagnostics.report())
+            exit(0)
+        }
         HelperRepair.runIfRequested()
+        // Vor allem anderen: Ist floosh zuletzt mehrmals früh abgestürzt,
+        // Panel, Island und Organizer für diesen Start abschalten
+        if !DebugSnapshot.isActive, !DebugSnapshot.shootRequested {
+            SafeStart.evaluate()
+        }
         DebugSnapshot.runIfRequested(engine: engine)
         if !DebugSnapshot.isActive {
             UpdateChecker.shared.startLoop()
@@ -40,12 +52,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             _ = DragCatcher.shared
             IslandController.shared.attach(engine: .shared)
             MenuBarOrganizer.shared.start()
+            SafeStart.explainIfNeeded()
+            StatusItemWatch.start { MenuBarController.shared?.statusItemForDiagnostics }
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         // Manuelle Lüftersteuerung nicht verwaist zurücklassen
         MainActor.assumeIsolated {
+            SafeStart.markStable()
             FanService.shared.relinquishOnQuit()
             FileShelf.shared.clearOnQuitIfNeeded()
             // Sonst bliebe die Energie-Zusicherung bis zum Abmelden stehen

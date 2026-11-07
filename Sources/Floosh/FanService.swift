@@ -52,6 +52,36 @@ final class FanService {
             applyCurve(force: false)
         }
     }
+    // MARK: Hitzeschutz
+
+    /// Im Auto-Modus bei Hitze vorübergehend Vollgas geben — für längere
+    /// Volllast wie Blender-Rendern am Mac mini: Normal regelt macOS leise,
+    /// wird CPU oder GPU zu heiß, übernimmt floosh mit 100 %, bis die
+    /// Temperatur deutlich gesunken ist (Hysterese).
+    var boostEnabled: Bool {
+        didSet {
+            defaults.set(boostEnabled, forKey: "ds.fanBoost")
+            if !boostEnabled { endBoost() }
+        }
+    }
+    /// Ab dieser Temperatur (°C, wärmster Sensor) Vollgas …
+    var boostOn: Double {
+        didSet {
+            defaults.set(boostOn, forKey: "ds.fanBoostOn")
+            if boostOff > boostOn - 5 { boostOff = boostOn - 5 }
+        }
+    }
+    /// … und erst unter dieser Temperatur zurück zur Automatik.
+    var boostOff: Double { didSet { defaults.set(boostOff, forKey: "ds.fanBoostOff") } }
+    /// Läuft der Lüfter gerade wegen des Hitzeschutzes auf Vollgas?
+    private(set) var boostActive = false
+    /// Temperatur, die der Hitzeschutz gerade sieht (wärmster Sensor).
+    private(set) var boostTemp: Double?
+    /// Seit wann die Temperatur über der Schwelle liegt — kurze Spitzen
+    /// sollen den Lüfter nicht hochjagen.
+    private var boostAboveSince: Date?
+    static let boostDelay: TimeInterval = 5
+
     /// Geglättete Sensortemperatur, die die Kurve gerade sieht.
     private(set) var curveTemp: Double?
     /// Aus der Kurve berechnete Zieldrehzahl in Prozent (auch außerhalb des
@@ -71,6 +101,9 @@ final class FanService {
         percent = defaults.object(forKey: "ds.fanPercent") as? Double ?? 50
         favorite1 = defaults.object(forKey: "ds.fanFav1") as? Double ?? 40
         favorite2 = defaults.object(forKey: "ds.fanFav2") as? Double ?? 80
+        boostEnabled = defaults.object(forKey: "ds.fanBoost") as? Bool ?? false
+        boostOn = defaults.object(forKey: "ds.fanBoostOn") as? Double ?? 90
+        boostOff = defaults.object(forKey: "ds.fanBoostOff") as? Double ?? 75
         curve = defaults.data(forKey: "ds.fanCurve")
             .flatMap { try? JSONDecoder().decode(FanCurve.self, from: $0) } ?? .standard
         // Nur der Kurven-Modus überlebt einen Neustart — eine feste manuelle
@@ -217,6 +250,8 @@ final class FanService {
     // MARK: Steuerung
 
     func setAuto() {
+        boostActive = false
+        boostAboveSince = nil
         mode = .auto
         persistMode()
         lastSentPercent = nil
@@ -231,6 +266,7 @@ final class FanService {
     func setManual(percent newPercent: Double? = nil) {
         if let newPercent { percent = min(max(newPercent, 0), 100) }
         defaults.set(percent, forKey: "ds.fanPercent")
+        boostActive = false
         mode = .manual
         persistMode()
         guard helperState == .ready else { return }
@@ -239,6 +275,7 @@ final class FanService {
     }
 
     func setCurve() {
+        boostActive = false
         mode = .curve
         persistMode()
         lastSentPercent = nil
@@ -251,6 +288,7 @@ final class FanService {
     func curveTick(cpuTemp: Double?, gpuTemp: Double?) {
         let now = Date()
         defer { lastCurveTick = now }
+        boostTick(hottest: [cpuTemp, gpuTemp].compactMap { $0 }.max(), now: now)
         guard let raw = curve.temperature(cpu: cpuTemp, gpu: gpuTemp) else {
             curveTemp = nil
             curveTarget = nil
@@ -266,6 +304,49 @@ final class FanService {
             curveTemp = raw
         }
         applyCurve(force: false)
+    }
+
+    /// Hitzeschutz: nur im Auto-Modus. Über der Schwelle (länger als
+    /// `boostDelay`) Vollgas, unter der unteren Schwelle zurück zu macOS.
+    private func boostTick(hottest: Double?, now: Date) {
+        boostTemp = hottest
+        guard boostEnabled, mode == .auto, let temp = hottest else {
+            boostAboveSince = nil
+            return
+        }
+        if boostActive {
+            if temp <= boostOff {
+                endBoost()
+            } else if lastSentPercent == nil, helperState == .ready {
+                // Letztes Senden ist fehlgeschlagen — erneut versuchen
+                sendManual(100)
+            }
+            return
+        }
+        guard temp >= boostOn else {
+            boostAboveSince = nil
+            return
+        }
+        let since = boostAboveSince ?? now
+        boostAboveSince = since
+        guard now.timeIntervalSince(since) >= Self.boostDelay, helperState == .ready else { return }
+        boostActive = true
+        lastError = nil
+        sendManual(100)
+    }
+
+    /// Hitzeschutz beenden und die Regelung an macOS zurückgeben.
+    private func endBoost() {
+        boostAboveSince = nil
+        guard boostActive else { return }
+        boostActive = false
+        lastSentPercent = nil
+        guard mode == .auto else { return }
+        stopPinging()
+        guard helperState == .ready else { return }
+        proxy()?.setAuto { [weak self] error in
+            Task { @MainActor in self?.lastError = error }
+        }
     }
 
     /// Zielwert aus der Kurve neu berechnen und — im Kurven-Modus — an den
@@ -306,7 +387,7 @@ final class FanService {
     /// Beim Beenden der App die Regelung zurückgeben (Best Effort; falls die
     /// App abstürzt, greift der Ping-Watchdog des Helpers).
     func relinquishOnQuit() {
-        guard mode != .auto, helperState == .ready else { return }
+        guard mode != .auto || boostActive, helperState == .ready else { return }
         proxy()?.setAuto { _ in }
         // Dem XPC-Call einen Moment Zeit geben, bevor der Prozess endet.
         Thread.sleep(forTimeInterval: 0.15)
@@ -317,7 +398,12 @@ final class FanService {
         pingTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(30))
-                guard let self, self.mode != .auto else { return }
+                // Auch während des Hitzeschutzes wachhalten, sonst schaltet
+                // der Helper nach 3 Minuten von selbst zurück auf Automatik
+                guard let self, self.mode != .auto || self.boostActive else {
+                    self?.pingTask = nil
+                    return
+                }
                 self.proxy()?.ping()
             }
         }

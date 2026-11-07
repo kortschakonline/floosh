@@ -91,6 +91,13 @@ final class MenuBarOrganizer {
         return !(screen.map(Self.hasNotch) ?? false)
     }
 
+    /// Mehrere Menüleisten (eine je Bildschirm), keine davon mit Notch —
+    /// dort kann ein einzelner Trenner nicht überall genau passen.
+    static var hasSeveralMenuBarsWithoutNotch: Bool {
+        NSScreen.screensHaveSeparateSpaces && NSScreen.screens.count > 1
+            && !NSScreen.screens.contains(where: hasNotch)
+    }
+
     private static func hasNotch(_ screen: NSScreen) -> Bool {
         screen.auxiliaryTopRightArea != nil && screen.safeAreaInsets.top > 0
     }

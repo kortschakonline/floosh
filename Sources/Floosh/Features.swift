@@ -8,7 +8,7 @@ enum Feature: String, CaseIterable, Identifiable {
     // Dropdown
     case cardSize, gridLayout, selectionStyle
     // Lüfter
-    case fanManual, fanCurve
+    case fanManual, fanCurve, fanBoost
     // Menüleiste
     case menuChannel, menuThermal, menuSparkline, menuHideIdle, menuTintText
     // Desktop-Panel und Island

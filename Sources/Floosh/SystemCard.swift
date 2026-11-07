@@ -196,7 +196,7 @@ struct SystemCard: View {
 
             switch fans.mode {
             case .auto:
-                EmptyView()
+                if fans.boostEnabled { boostStatus }
             case .manual:
                 if fans.helperState == .ready { manualControls } else { helperPrompt }
             case .curve:
@@ -257,6 +257,29 @@ struct SystemCard: View {
                 fans.setCurve()
             }
         }
+    }
+
+    /// Auto-Modus mit Hitzeschutz: Schwelle bzw. „Vollgas" anzeigen.
+    private var boostStatus: some View {
+        HStack(spacing: 6) {
+            Image(systemName: fans.boostActive ? "flame.fill" : "flame")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(fans.boostActive ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
+            if fans.boostActive {
+                Text("Hitzeschutz: Vollgas bis \(Int(fans.boostOff)) °C")
+                    .foregroundStyle(.orange)
+            } else {
+                Text("Hitzeschutz ab \(Int(fans.boostOn)) °C")
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+            if let temp = fans.boostTemp {
+                Text("\(Int(temp.rounded())) °C")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .font(.caption2)
     }
 
     private var manualControls: some View {

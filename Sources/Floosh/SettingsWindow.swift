@@ -315,6 +315,22 @@ private struct FanSettingsTab: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Hitzeschutz") {
+                Toggle("Im Auto-Modus bei Hitze auf Vollgas", isOn: $fans.boostEnabled)
+                    .featureGated(.fanBoost)
+                if fans.boostEnabled {
+                    boostRow(label: "Vollgas ab", value: $fans.boostOn, range: 70...100)
+                    boostRow(label: "Zurück unter", value: $fans.boostOff, range: 50...(fans.boostOn - 5))
+                    if fans.boostActive {
+                        Label("Läuft gerade auf Vollgas", systemImage: "flame.fill")
+                            .foregroundStyle(.orange)
+                    }
+                }
+                Text("Normal regelt macOS die Lüfter leise. Bleibt der wärmste Sensor (CPU oder GPU) einige Sekunden über der Schwelle — etwa beim Rendern —, dreht floosh auf 100 % und gibt erst wieder an macOS ab, wenn die Temperatur deutlich gesunken ist. Braucht den System-Helfer.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Drehzahl-Favoriten") {
                 favoriteRow(label: "Favorit 1", value: $fans.favorite1)
                 favoriteRow(label: "Favorit 2", value: $fans.favorite2)
@@ -353,6 +369,16 @@ private struct FanSettingsTab: View {
         }
         .formStyle(.grouped)
         .onAppear { fans.refreshHelperState() }
+    }
+
+    private func boostRow(label: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
+        HStack {
+            Text(label)
+            Slider(value: value, in: range, step: 1)
+            Text("\(Int(value.wrappedValue)) °C")
+                .monospacedDigit()
+                .frame(width: 48, alignment: .trailing)
+        }
     }
 
     /// Ein Stützpunkt: Temperatur-Regler, Prozent-Regler, Entfernen-Knopf.
@@ -554,11 +580,23 @@ private struct OrganizerSettingsTab: View {
                     PermissionRow(title: "Bedienungshilfen", detail: "Ohne Notch nötig, sonst bleiben die Symbole sichtbar",
                                   granted: false, pane: "Privacy_Accessibility")
                 }
+                if organizer.enabled && !organizer.barMode && MenuBarOrganizer.hasSeveralMenuBarsWithoutNotch {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Mehrere Bildschirme ohne Notch", systemImage: "rectangle.on.rectangle")
+                            .font(.callout.weight(.semibold))
+                        Text("Jeder Bildschirm hat hier eine eigene Menüleiste, der Trenner aber nur eine Länge. Er richtet sich nach der schmalsten Leiste — auf breiteren Bildschirmen bleiben deshalb einzelne Symbole sichtbar. Zuverlässiger ist die Leiste: Die Menüleiste bleibt, wie sie ist, und ein Klick auf den Pfeil zeigt die versteckten Symbole darunter.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Button("Leiste verwenden") { organizer.barMode = true }
+                            .controlSize(.small)
+                    }
+                    .padding(.vertical, 2)
+                }
             }
             Section("So ordnest du an") {
                 Label("⌘ gedrückt halten und Symbole in der Menüleiste ziehen", systemImage: "command")
-                Label("rechts vom Pfeil ‹ — immer sichtbar", systemImage: "eye")
-                Label("zwischen │ und ‹ — versteckt, Klick auf den Pfeil zeigt sie", systemImage: "eye.slash")
+                Label("rechts vom Trenner │ — immer sichtbar (│ direkt links neben dem Pfeil ‹ lassen)", systemImage: "eye")
+                Label("zwischen ┆ und │ — versteckt, Klick auf den Pfeil zeigt sie", systemImage: "eye.slash")
                 Label("links von ┆ — immer versteckt, nur per ⌥-Klick auf den Pfeil", systemImage: "lock")
                 Button("Jetzt alle Bereiche zum Anordnen zeigen") {
                     organizer.expand(includingAlwaysHidden: true)
@@ -686,6 +724,7 @@ private struct GeneralSettingsTab: View {
     @Bindable var updates: UpdateChecker
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
+    @State private var diagnosticsCopied = false
 
     var body: some View {
         Form {
@@ -746,6 +785,23 @@ private struct GeneralSettingsTab: View {
                     Link("GitHub-Releases", destination: URL(string: "https://github.com/\(UpdateChecker.repository)/releases")!)
                         .font(.caption)
                 }
+            }
+
+            Section("Fehlersuche") {
+                HStack {
+                    Button(diagnosticsCopied ? "Kopiert ✓" : "Diagnose kopieren") {
+                        Diagnostics.copyToPasteboard()
+                        diagnosticsCopied = true
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(2))
+                            diagnosticsCopied = false
+                        }
+                    }
+                    Spacer()
+                }
+                Text("Legt Version, Bildschirme, Rechte, Einstellungen, die letzten Absturzberichte und das Organizer-Protokoll als Text in die Zwischenablage — zum Einfügen in eine Nachricht. Enthält keine Seriennummer und keine Dateinamen.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section {
